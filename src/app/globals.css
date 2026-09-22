@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+@theme {
+  --color-maroon: #8a1f4b;
+  --color-maroon-deep: #5e1234;
+  --color-rose: #d47c8e;
+  --color-blush: #efc0bc;
+  --color-petal: #f6e5e7;
+  --color-sage: #a8b48a;
+  --color-sage-soft: #a0ab89;
+  --color-olive: #5e6841;
+  --color-olive-deep: #3d4429;
+  --color-sand: #cbb8a4;
+  --color-cream: #faf4ee;
+  --color-ink: #241a1d;
+
+  --font-display: var(--font-marcellus), "Marcellus", serif;
+  --font-script: var(--font-shivaraja), var(--font-yatra), cursive;
+  --font-body: var(--font-jost), ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+  --edge: 1px solid color-mix(in srgb, var(--color-maroon) 16%, transparent);
+}
+
+* { box-sizing: border-box; }
+
+html {
+  background: var(--color-cream);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  margin: 0;
+  overflow-x: hidden;
+}
+
+/* Lenis */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+/* Type helpers */
+.font-script { font-family: var(--font-script); }
+
+.u-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.045;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* viewport-fit=cover lets content run under the notch and home indicator, so
+   the page owes itself the insets back. Landscape is the case that bites:
+   there the notch sits over a side edge, not the top. */
+body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Custom cursor.
+ *
+ * The class is added from JS only once the custom cursor is actually on
+ * screen, never from a media query. Hiding the native pointer in CSS meant
+ * anyone the custom cursor did not render for — a window narrower than the
+ * md breakpoint, where the cursor element is display:none — was left with no
+ * pointer at all.
+ *
+ * `*` and !important because `cursor` is inherited but any element carrying
+ * its own value wins: the UA sets one on textarea, select and summary, and a
+ * Tailwind cursor-* utility would too. Naming a handful of tags let the
+ * native arrow back through on everything else. */
+.cursor-none,
+.cursor-none * {
+  cursor: none !important;
+}
+
+::selection { background: var(--color-maroon); color: var(--color-petal); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

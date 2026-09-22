@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "verify",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NEXT_DIST_DIR=.next-verify npx next start -p 3100"
+      ],
+      "port": 3100
+    },
+    {
+      "name": "dev-scratch",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NEXT_DIST_DIR=.next-dev-scratch npx next dev -p 3200"
+      ],
+      "port": 3200
+    }
+  ]
+}
