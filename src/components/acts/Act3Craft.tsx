@@ -100,7 +100,7 @@ export default function Act3Craft() {
     <section
       ref={root}
       id="craft"
-      className="u-grain relative flex h-[100svh] items-center overflow-hidden bg-petal/45"
+      className="u-grain relative flex h-[100lvh] items-center overflow-hidden bg-petal/45"
     >
       <div className="mx-auto grid w-full max-w-[1400px] 2xl:max-w-[1720px] grid-cols-1 items-center gap-[clamp(1.5rem,3vw,3rem)] px-[clamp(1.5rem,6vw,4rem)] lg:grid-cols-[0.85fr_1fr] lg:gap-[clamp(1.5rem,4vw,3.5rem)]">
         {/* Copy column */}

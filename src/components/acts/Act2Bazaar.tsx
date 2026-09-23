@@ -120,7 +120,21 @@ export default function Act2Bazaar() {
       data-cursor-invert
       className="u-grain relative overflow-hidden bg-olive-deep"
     >
-      <div className="flex h-[100svh] items-center">
+      {/* `lvh`, not `svh`, because this act is PINNED.
+
+          On iOS and iPadOS the URL bar collapses once you scroll, and the
+          viewport grows from `svh` (chrome shown) to `lvh` (chrome hidden). A
+          pinned element is fixed at the height it was given, so one sized in
+          `svh` stops short of the bottom of the enlarged viewport and the next
+          section shows through as a strip beneath it.
+
+          `lvh` is safe for pinning in a way `dvh` is not: both `svh` and `lvh`
+          are static per device and orientation, so ScrollTrigger's measured pin
+          height never changes under it, while `dvh` would rethrash on every
+          scroll. Content caps elsewhere in this file stay in `svh` on purpose —
+          those guard against the SMALL viewport, so the content still fits
+          while the chrome is showing. */}
+      <div className="flex h-[100lvh] items-center">
         <div
           ref={track}
           className="flex items-center gap-[5vw] px-[8vw] will-change-transform"

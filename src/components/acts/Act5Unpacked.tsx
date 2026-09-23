@@ -33,7 +33,7 @@ export default function Act5Unpacked() {
     <section
       ref={root}
       id="unpacked"
-      className="u-grain relative flex min-h-[100svh] flex-col justify-center overflow-hidden bg-petal/50 pt-[12vh] pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-[calc(2.5rem+env(safe-area-inset-bottom))]"
+      className="u-grain relative flex min-h-[100lvh] flex-col justify-center overflow-hidden bg-petal/50 pt-[12vh] pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-[calc(2.5rem+env(safe-area-inset-bottom))]"
     >
       {/* The Hyderabad facade used to sit in a left column here. It anchors
           that end of the journey in the hero now, and showing the same

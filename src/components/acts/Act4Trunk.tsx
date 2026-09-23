@@ -130,7 +130,7 @@ export default function Act4Trunk() {
     <section
       ref={root}
       id="trunk"
-      className="u-grain relative flex h-[100svh] items-center overflow-hidden bg-cream"
+      className="u-grain relative flex h-[100lvh] items-center overflow-hidden bg-cream"
     >
       <div className="mx-auto grid w-full max-w-[1400px] 2xl:max-w-[1720px] grid-cols-1 items-center gap-[6vh] px-[clamp(1.5rem,6vw,4rem)] md:grid-cols-[0.85fr_1fr] md:gap-[clamp(1.5rem,4vw,3.5rem)]">
         {/* Copy */}
@@ -173,7 +173,7 @@ export default function Act4Trunk() {
           /* Capped against the height the copy leaves, the same way Act 3's
              cluster is. Stacked single-column, a full-width square canvas plus
              the twelve-item list overran a 667pt phone by 64px once the type
-             came up — and this act is pinned at h-[100svh], so it clips rather
+             came up — and this act is pinned at h-[100lvh], so it clips rather
              than scrolls. Taller phones are unaffected: the width still wins
              the min(). */
           className="relative mx-auto aspect-square w-full max-w-[min(100%,calc(100svh-26rem))] md:aspect-4/3 md:max-w-none"
