@@ -119,6 +119,16 @@ export default function Act2Bazaar() {
          pale palette here — maroon on olive-deep is close to invisible. */
       data-cursor-invert
       className="u-grain relative overflow-hidden bg-olive-deep"
+      /* A skirt of the section's own colour below it.
+           
+           `overflow-hidden` clips children but not the element's own shadow, and
+           a shadow costs no layout, so this paints past the bottom edge without
+           changing a single measurement. If a pin is ever measured short again —
+           a font swapping late, a toolbar settling, a browser we have not seen —
+           the reader sees more of this act rather than a strip of the next one.
+           The following section paints over it in normal flow, so it is only
+           ever visible in the gap it exists to fill. */
+      style={{ boxShadow: "0 20vh 0 0 var(--color-olive-deep)" }}
     >
       {/* `lvh`, not `svh`, because this act is PINNED.
 

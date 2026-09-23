@@ -131,6 +131,16 @@ export default function Act4Trunk() {
       ref={root}
       id="trunk"
       className="u-grain relative flex h-[100lvh] items-center overflow-hidden bg-cream"
+      /* A skirt of the section's own colour below it.
+           
+           `overflow-hidden` clips children but not the element's own shadow, and
+           a shadow costs no layout, so this paints past the bottom edge without
+           changing a single measurement. If a pin is ever measured short again —
+           a font swapping late, a toolbar settling, a browser we have not seen —
+           the reader sees more of this act rather than a strip of the next one.
+           The following section paints over it in normal flow, so it is only
+           ever visible in the gap it exists to fill. */
+      style={{ boxShadow: "0 20vh 0 0 var(--color-cream)" }}
     >
       <div className="mx-auto grid w-full max-w-[1400px] 2xl:max-w-[1720px] grid-cols-1 items-center gap-[6vh] px-[clamp(1.5rem,6vw,4rem)] md:grid-cols-[0.85fr_1fr] md:gap-[clamp(1.5rem,4vw,3.5rem)]">
         {/* Copy */}

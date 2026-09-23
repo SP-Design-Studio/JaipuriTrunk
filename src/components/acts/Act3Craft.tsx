@@ -101,6 +101,19 @@ export default function Act3Craft() {
       ref={root}
       id="craft"
       className="u-grain relative flex h-[100lvh] items-center overflow-hidden bg-petal/45"
+      /* A skirt of the section's own colour below it.
+           
+           `overflow-hidden` clips children but not the element's own shadow, and
+           a shadow costs no layout, so this paints past the bottom edge without
+           changing a single measurement. If a pin is ever measured short again —
+           a font swapping late, a toolbar settling, a browser we have not seen —
+           the reader sees more of this act rather than a strip of the next one.
+           The following section paints over it in normal flow, so it is only
+           ever visible in the gap it exists to fill. */
+      style={{
+        boxShadow:
+          "0 20vh 0 0 color-mix(in srgb, var(--color-petal) 45%, var(--color-cream))",
+      }}
     >
       <div className="mx-auto grid w-full max-w-[1400px] 2xl:max-w-[1720px] grid-cols-1 items-center gap-[clamp(1.5rem,3vw,3rem)] px-[clamp(1.5rem,6vw,4rem)] lg:grid-cols-[0.85fr_1fr] lg:gap-[clamp(1.5rem,4vw,3.5rem)]">
         {/* Copy column */}
