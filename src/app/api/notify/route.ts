@@ -46,10 +46,24 @@ async function toSupabase(signup: Signup): Promise<Stored> {
       apikey: key,
       authorization: `Bearer ${key}`,
       "content-type": "application/json",
-      // ON CONFLICT DO NOTHING, but ask for the rows back. A duplicate is
-      // then an ordinary 201 with an empty array rather than a 409 to catch,
-      // so we can tell the two apart without treating either as an error.
-      prefer: "resolution=ignore-duplicates,return=representation",
+      /**
+       * A plain insert. `resolution=ignore-duplicates` is deliberately NOT
+       * sent, because it does not do what it looks like it does here.
+       *
+       * PostgREST turns it into ON CONFLICT DO NOTHING and infers the conflict
+       * target from the PRIMARY KEY. This table's key is `id`, an identity
+       * column, so every insert arrives with a fresh one and that conflict can
+       * never fire. The row then trips `waitlist_email_lower_key` — an
+       * expression index on lower(email), which PostgREST cannot infer — and
+       * Postgres raises 23505, which came back as a 409 and was thrown as a
+       * server error. A returning visitor got "couldn't save that just now".
+       *
+       * So the violation is caught explicitly below instead of being routed
+       * around. `return=representation` stays: if the table is ever rekeyed so
+       * ON CONFLICT does fire, an ignored row comes back as an empty array and
+       * that is handled too.
+       */
+      prefer: "return=representation",
     },
     body: JSON.stringify({
       email: signup.email,
@@ -59,12 +73,18 @@ async function toSupabase(signup: Signup): Promise<Stored> {
   });
 
   if (!res.ok) {
-    throw new Error(`supabase responded ${res.status}: ${await res.text()}`);
+    const detail = await res.text();
+    // 23505 is unique_violation. PostgREST maps it to 409, but the SQLSTATE is
+    // the reliable signal, so both are accepted: this address is already on the
+    // list, which is an outcome rather than a failure.
+    if (res.status === 409 || detail.includes('"23505"')) return "duplicate";
+    throw new Error(`supabase responded ${res.status}: ${detail}`);
   }
 
-  // The array holds what was actually written. Empty means the unique index on
-  // lower(email) caught it and nothing new was stored.
-  const written = (await res.json()) as unknown;
+  // Reached only when the insert succeeded. An empty array would mean an
+  // ON CONFLICT DO NOTHING swallowed the row, which cannot happen with the
+  // current key but costs nothing to honour.
+  const written = (await res.json().catch(() => null)) as unknown;
   return Array.isArray(written) && written.length === 0
     ? "duplicate"
     : "inserted";
@@ -98,6 +118,11 @@ async function toLocalFile(signup: Signup): Promise<Stored> {
     }
     // Same rule as the database's unique index, so the "already on the list"
     // path can be exercised in dev with no keys configured at all.
+    //
+    // This is a SIMULATION of Supabase's behaviour, not evidence of it. Testing
+    // the duplicate path here once passed while production still 502'd, because
+    // this branch agreed with an assumption about PostgREST that was wrong.
+    // Changes to `toSupabase` need checking against a real project.
     if (rows.some((r) => r.email === signup.email)) {
       console.info(`[notify] dev: ${signup.email} already in ${path}`);
       return "duplicate";
