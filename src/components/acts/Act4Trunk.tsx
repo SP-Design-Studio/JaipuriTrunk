@@ -155,7 +155,14 @@ export default function Act4Trunk() {
             ))}
           </ul>
 
-          <p className="a4-seal text-ink/65 mx-auto mt-8 max-w-sm translate-y-4 text-[clamp(0.95rem,1.8vw,1.08rem)] leading-relaxed font-light opacity-0 md:mx-0">
+          {/* `translate-y-4` would have left this 16px low forever: Tailwind v4
+              compiles it to the standalone `translate` property, and the tween
+              animating `y` only ever reaches `transform`. The offset lives
+              inline so the tween can actually undo it. */}
+          <p
+            className="a4-seal text-ink/65 mx-auto mt-8 max-w-sm text-[clamp(0.95rem,1.8vw,1.08rem)] leading-relaxed font-light opacity-0 md:mx-0"
+            style={{ transform: "translateY(1rem)" }}
+          >
             Packed in Jaipur on a Tuesday and put on the train south.
           </p>
         </div>

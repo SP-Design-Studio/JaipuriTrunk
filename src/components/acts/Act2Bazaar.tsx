@@ -196,7 +196,14 @@ export default function Act2Bazaar() {
 
       {/* Rail progress */}
       <div className="absolute inset-x-[8vw] bottom-10 h-px bg-petal/12">
-        <div className="a2-progress bg-rose h-px origin-left scale-x-0" />
+        {/* Start state inline, in the property GSAP animates. Tailwind v4's
+            `scale-x-0` sets the standalone `scale` property while GSAP writes
+            `transform: scaleX()`; both applied, so `scale: 0 1` held this bar
+            at zero for the whole rail and the progress indicator never drew. */}
+        <div
+          className="a2-progress bg-rose h-px origin-left"
+          style={{ transform: "scaleX(0)" }}
+        />
       </div>
     </section>
   );
