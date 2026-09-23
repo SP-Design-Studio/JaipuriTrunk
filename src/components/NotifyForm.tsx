@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import NotifyTag from "@/components/NotifyTag";
 
 type State = "idle" | "sending" | "done" | "error";
 
@@ -8,6 +9,10 @@ export default function NotifyForm() {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<State>("idle");
   const [message, setMessage] = useState("");
+  /** Whether the address was already on the list, for the tag's two readings. */
+  const [already, setAlready] = useState(false);
+  /** The address as it was submitted, kept for the tag after the input clears. */
+  const [tagged, setTagged] = useState("");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +35,15 @@ export default function NotifyForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
       setState("done");
-      setMessage("You're on the list. We'll write when the first trunk lands.");
+      setAlready(Boolean(data.already));
+      setTagged(email.trim().toLowerCase());
+      // A returning visitor gets told, rather than thanked a second time and
+      // left unsure whether the first attempt ever worked.
+      setMessage(
+        data.already
+          ? "We already had this address. Nothing more to do."
+          : "We'll write when the first trunk lands.",
+      );
     } catch (err) {
       setState("error");
       setMessage(err instanceof Error ? err.message : "Something went wrong.");
@@ -38,13 +51,21 @@ export default function NotifyForm() {
   };
 
   if (state === "done") {
+    // Wider than the form itself: the plate is a poster, and the act's column
+    // allows 512px.
     return (
-      <p
-        role="status"
-        className="font-display text-olive border-olive/30 mx-auto max-w-md border-t border-b py-5 text-center text-lg"
-      >
-        {message}
-      </p>
+      <div className="mx-auto w-full max-w-[512px]">
+        <NotifyTag email={tagged} already={already} />
+        {/* The tag is a picture, so the outcome is also stated in text — both
+            for anyone who cannot see it and because `role="status"` is what
+            makes a screen reader announce that the submission worked. */}
+        <p
+          role="status"
+          className="text-ink/55 mt-4 text-center text-[clamp(0.85rem,1.3vw,0.98rem)] font-light"
+        >
+          {message}
+        </p>
+      </div>
     );
   }
 

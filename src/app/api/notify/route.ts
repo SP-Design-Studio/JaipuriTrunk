@@ -3,18 +3,17 @@ import { NextResponse } from "next/server";
 /**
  * Waitlist capture.
  *
- * Two destinations, both optional and independent:
+ * One destination: Supabase. Every signup becomes a row you can query, export,
+ * or later hand to the shop.
  *
- *   Supabase  the durable list. Every signup becomes a row you can query,
- *             export, or later hand to the shop. This is the one that matters.
- *   Resend    an immediate note to you per signup. Convenience, not storage —
- *             an inbox is a poor list and a free tier will cap out.
+ * There used to be a second — a Resend email to us on every signup — and it is
+ * gone on purpose. An inbox is a poor list when the real one is a table you can
+ * query, and it was never configured, so it had never actually sent anything.
+ * The email worth writing is a confirmation to the person who signed up, and
+ * that needs a verified sending domain and an unsubscribe link before it does
+ * more good than harm. It belongs with the admin panel, not here.
  *
- * They are deliberately not all-or-nothing. A signup that reaches Supabase but
- * fails to email is a success: the address is safe, and you have lost only a
- * notification. The reverse is a failure, because nothing was kept.
- *
- * With neither configured the route still returns 200 and logs the address, so
+ * With nothing configured the route still returns 200 and keeps the address, so
  * the form is never broken in front of a visitor while you are setting keys up.
  *
  * Supabase is called over its REST endpoint rather than through the SDK. This
@@ -26,11 +25,20 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 type Signup = { email: string; at: string; source: string };
 
-/** The list. Returns false if it is not configured, throws if it failed. */
-async function toSupabase(signup: Signup): Promise<boolean> {
+/**
+ * What happened to a signup.
+ *
+ * `duplicate` is a distinct outcome rather than a silent success, because a
+ * returning visitor who types the same address deserves to be told it is
+ * already on the list instead of being thanked again and left wondering.
+ */
+type Stored = "inserted" | "duplicate" | "unconfigured";
+
+/** The list. Returns "unconfigured" if no keys are set, throws if it failed. */
+async function toSupabase(signup: Signup): Promise<Stored> {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return false;
+  if (!url || !key) return "unconfigured";
 
   const res = await fetch(`${url}/rest/v1/waitlist`, {
     method: "POST",
@@ -38,43 +46,28 @@ async function toSupabase(signup: Signup): Promise<boolean> {
       apikey: key,
       authorization: `Bearer ${key}`,
       "content-type": "application/json",
-      // Swallow the duplicate-key error a returning visitor causes. Signing up
-      // twice is not an error worth showing anyone.
-      prefer: "resolution=ignore-duplicates,return=minimal",
+      // ON CONFLICT DO NOTHING, but ask for the rows back. A duplicate is
+      // then an ordinary 201 with an empty array rather than a 409 to catch,
+      // so we can tell the two apart without treating either as an error.
+      prefer: "resolution=ignore-duplicates,return=representation",
     },
-    body: JSON.stringify({ email: signup.email, signed_up_at: signup.at, source: signup.source }),
+    body: JSON.stringify({
+      email: signup.email,
+      signed_up_at: signup.at,
+      source: signup.source,
+    }),
   });
 
   if (!res.ok) {
     throw new Error(`supabase responded ${res.status}: ${await res.text()}`);
   }
-  return true;
-}
 
-/** The nudge. Never throws — a failed notification must not fail the signup. */
-async function toResend(signup: Signup): Promise<boolean> {
-  const key = process.env.RESEND_API_KEY;
-  const to = process.env.NOTIFY_EMAIL_TO;
-  const from = process.env.NOTIFY_EMAIL_FROM;
-  if (!key || !to || !from) return false;
-
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-      body: JSON.stringify({
-        from,
-        to,
-        subject: `Waitlist: ${signup.email}`,
-        text: `${signup.email}\nsigned up ${signup.at}\nvia ${signup.source}`,
-      }),
-    });
-    if (!res.ok) throw new Error(`resend responded ${res.status}`);
-    return true;
-  } catch (err) {
-    console.error("[notify] email notification failed (signup was still kept):", err);
-    return false;
-  }
+  // The array holds what was actually written. Empty means the unique index on
+  // lower(email) caught it and nothing new was stored.
+  const written = (await res.json()) as unknown;
+  return Array.isArray(written) && written.length === 0
+    ? "duplicate"
+    : "inserted";
 }
 
 /**
@@ -85,10 +78,13 @@ async function toResend(signup: Signup): Promise<boolean> {
  * this would throw there, and a waitlist that lives on a serverless instance's
  * disk would vanish with the instance anyway.
  */
-async function toLocalFile(signup: Signup) {
+async function toLocalFile(signup: Signup): Promise<Stored> {
   if (process.env.NODE_ENV === "production") {
-    console.info("[notify] nothing configured — signup logged only:", signup.email);
-    return;
+    console.info(
+      "[notify] nothing configured — signup logged only:",
+      signup.email,
+    );
+    return "inserted";
   }
   try {
     const { readFile, writeFile } = await import("node:fs/promises");
@@ -100,11 +96,21 @@ async function toLocalFile(signup: Signup) {
       // First signup, or the file was hand-edited into something unparseable.
       // Either way, start a fresh list rather than losing this one.
     }
+    // Same rule as the database's unique index, so the "already on the list"
+    // path can be exercised in dev with no keys configured at all.
+    if (rows.some((r) => r.email === signup.email)) {
+      console.info(`[notify] dev: ${signup.email} already in ${path}`);
+      return "duplicate";
+    }
     rows.push(signup);
     await writeFile(path, JSON.stringify(rows, null, 2));
-    console.info(`[notify] dev: ${signup.email} -> ${path} (${rows.length} total)`);
+    console.info(
+      `[notify] dev: ${signup.email} -> ${path} (${rows.length} total)`,
+    );
+    return "inserted";
   } catch (err) {
     console.error("[notify] dev fallback could not write:", err);
+    return "inserted";
   }
 }
 
@@ -117,7 +123,10 @@ export async function POST(request: Request) {
   }
 
   if (typeof email !== "string" || !EMAIL.test(email.trim())) {
-    return NextResponse.json({ error: "That doesn't look like an email address." }, { status: 400 });
+    return NextResponse.json(
+      { error: "That doesn't look like an email address." },
+      { status: 400 },
+    );
   }
 
   const signup: Signup = {
@@ -126,22 +135,23 @@ export async function POST(request: Request) {
     source: request.headers.get("referer") ?? "direct",
   };
 
-  let stored = false;
+  let stored: Stored;
   try {
     stored = await toSupabase(signup);
   } catch (err) {
     console.error("[notify] could not store signup:", err);
     return NextResponse.json(
       { error: "Couldn't save that just now. Try again in a moment." },
-      { status: 502 }
+      { status: 502 },
     );
   }
 
-  // Fired after the store, and its result is not awaited into the response:
-  // the visitor should not wait on an email that is only for us.
-  void toResend(signup);
+  if (stored === "unconfigured") stored = await toLocalFile(signup);
 
-  if (!stored) await toLocalFile(signup);
+  // Nothing was added, so there is nothing to be notified about.
+  if (stored === "duplicate") {
+    return NextResponse.json({ ok: true, already: true });
+  }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, already: false });
 }
