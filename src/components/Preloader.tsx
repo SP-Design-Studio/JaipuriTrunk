@@ -124,6 +124,35 @@ export default function Preloader({
       )
       .call(onReveal, undefined, "<0.1");
 
+    /**
+     * Development-only handles for photographing the curtain.
+     *
+     * The reveal is GSAP on requestAnimationFrame rather than CSS animation, so
+     * devtools cannot slow it down or step through it — and it is over in about
+     * three seconds, once, on first load. These make it sit still long enough
+     * to look at:
+     *
+     *   ?preloader=hold        freeze at 1.5s: curtain down, bar full
+     *   ?preloader=hold:1.9    freeze just after the lift begins
+     *   ?preloader=hold:2.5    freeze mid-lift, arcade stretched
+     *   ?preloader=slow        play the whole thing at a seventh speed
+     *
+     * Stripped in production: `process.env.NODE_ENV` is inlined at build time,
+     * so the branch and everything in it disappears from the bundle.
+     */
+    if (process.env.NODE_ENV !== "production") {
+      const mode = new URLSearchParams(window.location.search).get("preloader");
+      if (mode === "slow") tl.timeScale(0.15);
+      else if (mode?.startsWith("hold")) {
+        const at = Number(mode.split(":")[1]);
+        // The second argument is `suppressEvents`, which defaults to TRUE — so
+        // a plain pause(t) seeks without firing onUpdate and the counter stays
+        // at 000 while the bar beside it reads full. Passing false renders the
+        // frame properly.
+        tl.pause(Number.isFinite(at) ? at : 1.5, false);
+      }
+    }
+
     if (root.current) root.current.style.pointerEvents = "none";
 
     return () => {
