@@ -5,9 +5,8 @@ import { gsap } from "gsap";
 
 /**
  * The pointer draws a running stitch — the hand stitch that closes a jutti's
- * upper and quilts a Jaipur bag. Act 3 says a pair of jhumkas passes through
- * six hands before it reaches yours; this makes the visitor's own hand the
- * last of them, sewing a seam across the page as it goes.
+ * upper and quilts a Jaipur bag. The page is about things made by hand; this
+ * makes the visitor's own hand sew a seam across it as it goes.
  *
  * How it is built: the last few pointer positions are kept in a ring buffer,
  * and only ALTERNATE pairs are drawn. The gaps are not decoration — skipping
@@ -25,8 +24,16 @@ const STITCHES = SAMPLES / 2;
 export default function Cursor() {
   const needle = useRef<HTMLDivElement>(null);
   const seam = useRef<SVGGElement>(null);
+  const layer = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // The layer lives in the browser's top layer, so it can be raised above a modal
+    // dialog (such as the gallery), which z-index alone cannot do.
+    try {
+      layer.current?.showPopover?.();
+    } catch {
+      /* already open, or no popover support: the fixed layer still works */
+    }
     // Touch devices never see this — there is no pointer to trail, and the
     // seam would be drawn under the hand anyway.
     if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches)
@@ -96,7 +103,20 @@ export default function Cursor() {
     // Sampled per frame rather than per pointermove: mice fire at wildly
     // different rates, and a buffer fed by events would make the stitch
     // length depend on the hardware rather than on how fast you moved.
+    // Once the pointer has been still for longer than the thread is long, every
+    // stitch has collapsed to a point: there is nothing left to draw, so stop
+    // writing to the DOM until it moves again.
+    let lastX = px;
+    let lastY = py;
+    let still = 0;
     const sew = () => {
+      if (px === lastX && py === lastY) {
+        if (++still > SAMPLES + 2) return;
+      } else {
+        still = 0;
+        lastX = px;
+        lastY = py;
+      }
       if (Math.hypot(px - xs[head], py - ys[head]) > MAX_STITCH) {
         xs.fill(px);
         ys.fill(py);
@@ -134,15 +154,13 @@ export default function Cursor() {
 
     let overDark = false;
 
-    /** Rose over the pale acts; the pale thread is for the dark olive bazaar. */
+    /** Maroon thread on the cream pages, cream on the maroon ones; orange over a target. */
     const thread = (hit: boolean) =>
-      overDark
-        ? hit
-          ? "var(--color-blush)"
-          : "var(--color-petal)"
-        : hit
-          ? "var(--color-maroon)"
-          : "var(--color-rose)";
+      hit
+        ? "var(--color-marigold)"
+        : overDark
+          ? "var(--color-cream)"
+          : "var(--color-maroon)";
 
     const over = (e: PointerEvent) => {
       const el = e.target as HTMLElement;
@@ -150,8 +168,7 @@ export default function Cursor() {
       // something that cannot be clicked reads as a promise the page does not
       // keep.
       const hit = Boolean(el.closest("a, button, input"));
-      // Sections opt in by attribute rather than by colour sniffing, so a
-      // future dark act only has to tag itself.
+      // Sections opt in by attribute (the maroon ones carry it).
       overDark = Boolean(el.closest("[data-cursor-invert]"));
 
       const colour = thread(hit);
@@ -183,14 +200,19 @@ export default function Cursor() {
   }, []);
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[999] hidden md:block">
+    <div
+      ref={layer}
+      id="cursor-layer"
+      popover="manual"
+      className="pointer-events-none fixed inset-0 z-[999] m-0 hidden h-screen w-screen overflow-visible border-0 bg-transparent p-0 md:block"
+    >
       <svg className="absolute inset-0 h-full w-full">
         {/* Hidden until the first pointermove seeds the buffer. Zero-length
             lines with a round cap still paint as dots, so an unhidden seam
             would show as a knot of dots at the top-left corner on load. */}
         <g
           ref={seam}
-          stroke="var(--color-rose)"
+          stroke="var(--color-maroon)"
           strokeLinecap="round"
           fill="none"
           opacity={0}
@@ -202,7 +224,7 @@ export default function Cursor() {
       </svg>
       <div
         ref={needle}
-        className="bg-maroon absolute top-0 left-0 h-1.5 w-1.5 rounded-full"
+        className="bg-maroon absolute top-0 left-0 h-2 w-2 rounded-full"
       />
     </div>
   );

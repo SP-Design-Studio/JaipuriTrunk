@@ -134,7 +134,7 @@ function QrCode({ className = "" }: { className?: string }) {
         y={-2}
         width={QR_SIZE + 4}
         height={QR_SIZE + 4}
-        fill="#fdf6ea"
+        fill="#f8eedb"
       />
       {cells}
     </svg>
@@ -227,7 +227,7 @@ export default function NotifyTag({
   return (
     <div ref={root} className="flex w-full justify-center">
       <div
-        className="nt-card relative w-full max-w-[512px] overflow-hidden bg-[#fdf6ea] text-left"
+        className="nt-card relative w-full max-w-[512px] overflow-hidden bg-[#f8eedb] text-left"
         /* `text-left` is not decoration — Act 5's column sets `text-center`,
            and the plate was inheriting it. Every label sat centred over its
            value where this idiom aligns them hard left, which is what made the
@@ -282,7 +282,7 @@ export default function NotifyTag({
                 stroke="var(--color-ink)"
                 strokeWidth="1.4"
               />
-              <path d="M6 12.6h12" stroke="#fdf6ea" strokeWidth="1.2" />
+              <path d="M6 12.6h12" stroke="#f8eedb" strokeWidth="1.2" />
             </svg>
             <div>
               <p
@@ -501,7 +501,7 @@ export default function NotifyTag({
           />
           <path
             d="M44 62v68M75 62v68M106 62v68"
-            stroke="#fdf6ea"
+            stroke="#f8eedb"
             strokeWidth="7"
           />
         </svg>
@@ -650,7 +650,7 @@ export default function NotifyTag({
               transform: "rotate(-9deg)",
               border:
                 "2px solid color-mix(in srgb, var(--color-maroon) 60%, transparent)",
-              background: "color-mix(in srgb, #fdf6ea 88%, transparent)",
+              background: "color-mix(in srgb, #f8eedb 88%, transparent)",
             }}
           >
             Already issued

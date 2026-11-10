@@ -20,12 +20,10 @@ const LINES = [
   // the type is already at its clamp floor, so it cannot shrink to cope. That
   // works out at about 39 characters. Measure after any edit rather than
   // counting by eye — 42 characters fits at 390px and wraps at 360px.
-  "A pair of jhumkas passes through six",
-  "hands before it gets to you. One person",
-  "casts the silver. Another blackens it.",
-  "A third sets the stones. Beading is",
-  "somebody's whole job. We are just the",
-  "last pair of hands that bring it south.",
+  "Every piece in the trunk is made",
+  "by hand, by people in Jaipur.",
+  "We choose it, pack it, and carry",
+  "it south. That is all we do.",
 ];
 
 export default function Act3Craft() {
@@ -71,17 +69,6 @@ export default function Act3Craft() {
           0.5,
         )
         .from(
-          ".a3-stat",
-          {
-            y: 22,
-            opacity: 0,
-            duration: 0.6,
-            ease: "power3.out",
-            stagger: 0.2,
-          },
-          "-=0.5",
-        )
-        .from(
           ".a3-par",
           {
             y: 70,
@@ -122,7 +109,7 @@ export default function Act3Craft() {
             <span className="font-display text-maroon block text-[clamp(2.4rem,6vw,4.4rem)]">
               {act.label}
             </span>
-            <span className="text-olive mt-3 block text-[clamp(0.86rem,1.6vw,1.05rem)] tracking-[0.3em] uppercase">
+            <span className="text-olive mt-3 block text-[clamp(0.86rem,1.6vw,1.05rem)] tracking-[0.22em] uppercase">
               {act.sub}
             </span>
           </h2>
@@ -134,23 +121,6 @@ export default function Act3Craft() {
                   {line}
                 </span>
               </span>
-            ))}
-          </div>
-
-          <div className="mt-12 flex flex-wrap gap-x-10 gap-y-5">
-            {[
-              { n: "06", l: "Bazaars walked" },
-              { n: "48h", l: "Jaipur to Hyderabad" },
-              { n: "0", l: "Middlemen" },
-            ].map((s) => (
-              <div key={s.l} className="a3-stat">
-                <p className="font-display text-maroon text-[clamp(1.6rem,3.5vw,2.4rem)] leading-none">
-                  {s.n}
-                </p>
-                <p className="text-olive/70 mt-2 text-[clamp(0.78rem,1.1vw,0.88rem)] tracking-[0.28em] uppercase">
-                  {s.l}
-                </p>
-              </div>
             ))}
           </div>
         </div>

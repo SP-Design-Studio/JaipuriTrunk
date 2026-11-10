@@ -55,8 +55,7 @@ export default function HawaMahal({ className = "" }: { className?: string }) {
         className="h-full w-full object-contain object-bottom select-none"
         onError={() => setFailed(true)}
         style={{
-          filter:
-            "drop-shadow(0 18px 30px color-mix(in srgb, var(--color-maroon) 16%, transparent))",
+          filter: "drop-shadow(0 8px 14px rgba(36,26,29,0.16))",
         }}
       />
     </div>

@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "design-sources/retired-code/v1-scroll-acts/**",
   ]),
 ]);
 

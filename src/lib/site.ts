@@ -1,12 +1,13 @@
 /** Single source of truth for launch-day details. Edit here, nowhere else. */
 export const site = {
   name: "JaipuriTrunk",
-  nameScript: "Jaipuri",
-  nameDisplay: "Trunk",
-  eyebrow: "Coming Soon",
+  /** The edition on show. The first trunk is done; this is the next one. */
+  eyebrow: "The second trunk",
   tagline: "Handpicked in Jaipur. Unpacked in Hyderabad.",
-  /** ISO 8601. Drives `launchLabel`, and the countdown when it is switched on. */
-  launchISO: "2026-12-01T10:00:00+05:30",
+  /** When the first trunk was unpacked and opened. */
+  firstISO: "2026-11-01T10:00:00+05:30",
+  /** ISO 8601. Drives every date on the page and the countdown. The second trunk opens on Sunday 6 December. */
+  launchISO: "2026-12-06T10:00:00+05:30",
   city: { from: "Jaipur", to: "Hyderabad" },
   social: {
     instagram: "https://instagram.com/jaipuri_trunk",
@@ -22,28 +23,45 @@ export const site = {
  * stops being type-checked, which is how a switch quietly rots while it is off.
  */
 export const features: { countdown: boolean } = {
-  /**
-   * The countdown clock in Act 5.
-   *
-   * Off. The component stays in the tree and keeps working — `launchISO` above
-   * still feeds it — so this is a switch, not a deletion. Turn it back on
-   * nearer the date, when a clock reads as anticipation rather than a year of
-   * waiting.
-   */
-  countdown: false,
+  /** The countdown clock. On: the date is weeks away, which is when a clock reads as anticipation. */
+  countdown: true,
 };
 
-/** "November 2026" — derived from launchISO so it can never drift out of sync. */
-export const launchLabel = new Intl.DateTimeFormat("en-GB", {
+/** A date in pieces (weekday, day, month, year), in Indian time. */
+function partsOf(iso: string) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Asia/Kolkata",
+  }).formatToParts(new Date(iso));
+  const part = (t: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === t)?.value ?? "";
+  return {
+    weekday: part("weekday"),
+    day: part("day"),
+    month: part("month"),
+    year: part("year"),
+  };
+}
+
+/** The launch date in pieces, all derived from `launchISO` so they cannot drift apart. */
+export const launch = partsOf(site.launchISO);
+
+/** When the first trunk was unpacked and opened, in pieces. */
+export const first = partsOf(site.firstISO);
+
+/** "1 November 2026": when the first trunk was unpacked and opened. */
+export const firstLabel = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
   month: "long",
   year: "numeric",
   timeZone: "Asia/Kolkata",
-}).format(new Date(site.launchISO));
+})
+  .format(new Date(site.firstISO))
+  .replace(/ /g, "\u00a0");
 
-export const acts = [
-  { id: "arrival", label: "Arrival", sub: "Where it begins" },
-  { id: "bazaar", label: "The Bazaar", sub: "What we found" },
-  { id: "craft", label: "The Craft", sub: "Whose hands made it" },
-  { id: "trunk", label: "The Trunk", sub: "Packed and sealed" },
-  { id: "unpacked", label: "Unpacked", sub: "Arriving in Hyderabad" },
-] as const;
+/** "6 December 2026", with non-breaking spaces so it wraps as one unit. */
+export const launchLabel =
+  `${launch.day} ${launch.month} ${launch.year}`.replace(/ /g, " ");

@@ -4,12 +4,14 @@ import { useCallback, useState } from "react";
 import SmoothScroll from "@/components/SmoothScroll";
 import Cursor from "@/components/Cursor";
 import Preloader from "@/components/Preloader";
+import SiteHeader from "@/components/SiteHeader";
 import { AssetProvider } from "@/components/AssetProvider";
-import Act1Arrival from "@/components/acts/Act1Arrival";
-import Act2Bazaar from "@/components/acts/Act2Bazaar";
-import Act3Craft from "@/components/acts/Act3Craft";
-import Act4Trunk from "@/components/acts/Act4Trunk";
-import Act5Unpacked from "@/components/acts/Act5Unpacked";
+import Hero from "@/components/sections/Hero";
+import Collection from "@/components/sections/Collection";
+import Craft from "@/components/sections/Craft";
+import Trunk from "@/components/sections/Trunk";
+import Route from "@/components/sections/Route";
+import Finale from "@/components/sections/Finale";
 
 export default function Experience({ assets }: { assets: string[] }) {
   const [ready, setReady] = useState(false);
@@ -18,7 +20,7 @@ export default function Experience({ assets }: { assets: string[] }) {
   const reveal = useCallback(() => setReady(true), []);
   const finished = useCallback(() => {
     // Unmount outside GSAP's rAF tick. Rendering from inside the ticker can
-    // collide with ScrollTrigger's pin-spacer DOM surgery further down the page.
+    // collide with ScrollTrigger's DOM work further down the page.
     requestAnimationFrame(() => setShowPreloader(false));
   }, []);
 
@@ -27,12 +29,14 @@ export default function Experience({ assets }: { assets: string[] }) {
       <SmoothScroll />
       <Cursor />
       {showPreloader && <Preloader onReveal={reveal} onFinished={finished} />}
+      <SiteHeader />
       <main>
-        <Act1Arrival ready={ready} />
-        <Act2Bazaar />
-        <Act3Craft />
-        <Act4Trunk />
-        <Act5Unpacked />
+        <Hero ready={ready} markOn={!showPreloader} />
+        <Collection />
+        <Craft />
+        <Trunk />
+        <Route />
+        <Finale />
       </main>
     </AssetProvider>
   );

@@ -43,6 +43,7 @@
     ".next-notify/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "design-sources/retired-code/v1-scroll-acts"
   ]
 }

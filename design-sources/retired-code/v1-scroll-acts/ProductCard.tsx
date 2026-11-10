@@ -70,7 +70,7 @@ export default function ProductCard({
         <h3 className="font-display text-petal mt-4 text-[clamp(1.25rem,2.6vw,1.85rem)] leading-tight tracking-wide">
           {item.name}
         </h3>
-        <p className="text-sage/55 mt-2.5 text-[clamp(0.78rem,1.1vw,0.86rem)] tracking-[0.3em] uppercase">
+        <p className="text-sage/55 mt-2.5 text-[clamp(0.78rem,1.1vw,0.86rem)] tracking-[0.22em] uppercase">
           {category}
         </p>
       </figcaption>

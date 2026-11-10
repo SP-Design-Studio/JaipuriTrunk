@@ -9,6 +9,8 @@ import {
   useTexture,
 } from "@react-three/drei";
 import * as THREE from "three";
+import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js";
+import { MONOGRAM_PATHS, MONOGRAM_VIEWBOX } from "@/components/Logo";
 import type { Group, Mesh } from "three";
 
 /** Lid travel, in radians. Past ~1.5 it reads as a chair back, not a trunk. */
@@ -17,7 +19,7 @@ const MAX_OPEN = 1.38;
 const W = 3.3; // width
 const H = 1.02; // body height — shallow enough to see the floor from above
 const D = 2.0; // depth
-const LID_H = 0.42; // shallow, like a vintage case lid
+const LID_H = 0.52; // the crown of the vaulted lid
 const WALL = 0.07;
 /**
  * The gold frame that follows every seam.
@@ -32,18 +34,6 @@ const WALL = 0.07;
  */
 const TRIM = WALL + 0.02;
 const RAIL = 0.05;
-/**
- * How far trim stands proud of the surface it is fixed to.
- *
- * Not decoration — it is what keeps faces out of the same plane. The rule for
- * this frame is that no two visible faces may be coplanar: a piece either
- * stands clear of its neighbour or ends buried inside it. On the body that
- * happened by accident, because the rim and foot rails swallow the posts'
- * ends. On the lid it did not: rails, posts and the top panel all finished at
- * exactly LID_H, and three coplanar surfaces is a depth buffer with no way to
- * choose between them — which is the striping across the closed lid.
- */
-const PROUD = 0.014;
 
 /**
  * These are the LIT colours, deliberately a step brighter than the brand
@@ -53,22 +43,23 @@ const PROUD = 0.014;
  * brighter and letting the patina map pull it back down averages out at the
  * brand colour while leaving real range either side of it.
  */
-const MAROON = "#8a1e3c";
-const MAROON_DEEP = "#5e132c";
+const MAROON = "#5e0f22";
+const MAROON_DEEP = "#3d0a17";
 /**
- * The brand value these average back to, kept for reference: #8a1f4b.
+ * The brand value these average back to, kept for reference: #801834.
  *
  * Blue is held down relative to red here. An earlier pass compensated each
  * channel by the same factor, which pushed the rendered trunk toward magenta —
  * the shell read as purple rather than as the oxblood the brand colour is.
  */
-const GOLD = "#c9a84e";
-const GOLD_DARK = "#a8873a";
+const GOLD = "#e07a30";
+const GOLD_DARK = "#b05a22";
 /**
- * Dusty rose, not the near-white petal: under the key light anything lighter
- * blows out to flat white and reads as plastic rather than lining.
+ * A deep burgundy silk. Dark on purpose: the pieces have cream-edged borders, and
+ * against a dark lining they glow, where against a pale one they vanish. Lit, it
+ * reads a step lighter than this.
  */
-const LINING = "#d2a59c";
+const LINING = "#6c1a35";
 /** The bounce light keeps the paler blush — it tints, it isn't a surface. */
 const FILL = "#efc0bc";
 
@@ -161,7 +152,7 @@ function noise(size: number, cx: number, cy: number, rand: () => number) {
 }
 
 /** Gold used for the stamped medallions. Paler than the hardware brass. */
-const GOLD_LEAF = "#c2a066";
+const GOLD_LEAF = "#e2a263";
 
 const hexToRGB = (hex: string): [number, number, number] => [
   parseInt(hex.slice(1, 3), 16) / 255,
@@ -372,6 +363,8 @@ function butiScale(tex: THREE.Texture) {
 }
 
 function projectUV(geo: THREE.BufferGeometry) {
+  // Curved surfaces measure their own UVs along the curve (see `strip`).
+  if (geo.userData.ownUV) return;
   const pos = geo.attributes.position;
   const nor = geo.attributes.normal;
   if (!pos || !nor) return;
@@ -515,7 +508,7 @@ function buildSurfaces(): Surfaces {
       const tone = 0.96 + mottle[i] * 0.08;
       const m = buti(x / MAP_SIZE, y / MAP_SIZE);
       for (let c = 0; c < 3; c++) {
-        const k = m * 0.88;
+        const k = m * 0.6;
         albedo[i * 3 + c] = base[c] * tone * (1 - k) + leaf[c] * k;
       }
     }
@@ -622,6 +615,167 @@ function PackedItem({
   );
 }
 
+/* ------------------------------------------------------------------ *
+ * The lid's vault                                                     *
+ *                                                                     *
+ * A trunk lid is not a slab. Its cross-section, front to back, is a   *
+ * short straight skirt and then a rising arc, and everything that     *
+ * follows the lid — the shell, the lining, the brass bands over it —  *
+ * is the same outline, grown or shrunk. Built as surfaces from that   *
+ * one function, so they can never disagree about where the lid is.    *
+ * ------------------------------------------------------------------ */
+
+type V2 = [number, number]; // [z, y], in the lid's own space (hinge at z = 0)
+
+/** Height of the straight skirt before the vault begins to rise. */
+const SKIRT = 0.16;
+
+/**
+ * The lid's outline. `inset` shrinks it (the lining sits under the shell) and
+ * `grow` expands it (brass bands sit just proud of the shell).
+ */
+function vaultProfile(grow = 0, inset = 0, n = 44): V2[] {
+  const z0 = inset - grow;
+  const z1 = D - inset + grow;
+  const top = LID_H - inset + grow;
+  const a = (z1 - z0) / 2;
+  const b = top - SKIRT;
+  const pts: V2[] = [
+    [z0, 0],
+    [z0, SKIRT],
+  ];
+  for (let i = 1; i < n; i++) {
+    const ph = (Math.PI * i) / n;
+    pts.push([z0 + a - a * Math.cos(ph), SKIRT + b * Math.sin(ph)]);
+  }
+  pts.push([z1, SKIRT], [z1, 0]);
+  return pts;
+}
+
+/**
+ * An extruded surface along the outline, between two x positions. It carries its
+ * own UVs, measured along the curve: the box projection used elsewhere picks an
+ * axis per vertex from its normal, and on an arc that flips mid-triangle and
+ * smears the grain across a visible band.
+ */
+function strip(pts: V2[], xa: number, xb: number): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const uv: number[] = [];
+  const idx: number[] = [];
+  let run = 0;
+  pts.forEach(([z, y], i) => {
+    if (i > 0) run += Math.hypot(z - pts[i - 1][0], y - pts[i - 1][1]);
+    pos.push(xa, y, z, xb, y, z);
+    uv.push(xa / TILE, run / TILE, xb / TILE, run / TILE);
+  });
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = i * 2;
+    idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  g.userData.ownUV = true;
+  return g;
+}
+
+/** The outline filled flat at one x: the lid's end panel. */
+function cap(pts: V2[], x: number): THREE.BufferGeometry {
+  const cz = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+  const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+  const pos: number[] = [x, cy, cz];
+  pts.forEach(([z, y]) => pos.push(x, y, z));
+  const idx: number[] = [];
+  for (let i = 0; i < pts.length; i++)
+    idx.push(0, 1 + i, 1 + ((i + 1) % pts.length));
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
+/** Evenly spaced points along an outline, for rivets. */
+function along(pts: V2[], spacing: number, from = 0): V2[] {
+  const out: V2[] = [];
+  let next = from;
+  let run = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const [z0, y0] = pts[i - 1];
+    const [z1, y1] = pts[i];
+    const len = Math.hypot(z1 - z0, y1 - y0);
+    while (next <= run + len) {
+      const t = (next - run) / len;
+      out.push([z0 + (z1 - z0) * t, y0 + (y1 - y0) * t]);
+      next += spacing;
+    }
+    run += len;
+  }
+  return out;
+}
+
+/** A row of round-headed rivets, drawn as one instanced mesh. */
+function Rivets({
+  points,
+  material,
+  radius = 0.024,
+}: {
+  points: [number, number, number][];
+  material: React.ReactNode;
+  radius?: number;
+}) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const m = ref.current;
+    if (!m) return;
+    const d = new THREE.Object3D();
+    points.forEach((p, i) => {
+      d.position.set(p[0], p[1], p[2]);
+      d.scale.set(1, 1, 0.7);
+      d.updateMatrix();
+      m.setMatrixAt(i, d.matrix);
+    });
+    m.instanceMatrix.needsUpdate = true;
+  }, [points]);
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, points.length]}>
+      <sphereGeometry args={[radius, 10, 8]} />
+      {material}
+    </instancedMesh>
+  );
+}
+
+/**
+ * The brand's monogram as a solid brass relief, extruded from the same path data as
+ * the logo. It is the trunk's lock: the logo is a key, so it is mounted where a lock
+ * plate would be, with a bevel that catches the light.
+ */
+function monogramRelief(height: number): THREE.BufferGeometry {
+  const [vx, vy, vw, vh] = MONOGRAM_VIEWBOX.split(" ").map(Number);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${MONOGRAM_VIEWBOX}">${MONOGRAM_PATHS.map(
+    (d) => `<path d="${d}"/>`,
+  ).join("")}</svg>`;
+  const data = new SVGLoader().parse(svg);
+  const shapes = data.paths.flatMap((path) => SVGLoader.createShapes(path));
+  const geo = new THREE.ExtrudeGeometry(shapes, {
+    depth: 13,
+    bevelEnabled: true,
+    bevelThickness: 2.2,
+    bevelSize: 1.6,
+    bevelSegments: 2,
+    curveSegments: 8,
+  });
+  // SVG space is y-down and starts at the viewBox corner: centre it, flip it
+  // upright, and bring it to world units.
+  const k = height / vh;
+  geo.translate(-(vx + vw / 2), -(vy + vh / 2), 0);
+  geo.scale(k, -k, k);
+  geo.computeVertexNormals();
+  return geo;
+}
+
 function Trunk({
   pack,
   items,
@@ -631,12 +785,36 @@ function Trunk({
 }) {
   const lid = useRef<Group>(null);
   const root = useRef<Group>(null);
+  const glow = useRef<THREE.PointLight>(null);
   const step = stepFor(items.length);
 
   // Built once for the life of the canvas. One texture per pattern: UVs are
   // box-projected to a common world scale below, so nothing needs its own
   // repeat and there are no per-mesh clones.
   const surf = useMemo(() => buildSurfaces(), []);
+  const lock = useMemo(() => monogramRelief(0.64), []);
+  useEffect(() => () => lock.dispose(), [lock]);
+
+  // The lid's surfaces, all derived from one outline.
+  const lidGeo = useMemo(() => {
+    const outer = vaultProfile(0, 0);
+    const inner = vaultProfile(0, WALL);
+    const bandL = vaultProfile(0.018, 0);
+    return {
+      outer: strip(outer, -W / 2, W / 2),
+      lining: strip(inner, -W / 2 + WALL, W / 2 - WALL),
+      endOut: [cap(outer, -W / 2), cap(outer, W / 2)],
+      endIn: [cap(inner, -W / 2 + WALL), cap(inner, W / 2 - WALL)],
+      bands: [-1, 1].map((s) => strip(bandL, s * 1.0 - 0.075, s * 1.0 + 0.075)),
+      rivets: [-1, 1].flatMap((s) =>
+        [-0.04, 0.04].flatMap((dx) =>
+          along(vaultProfile(0.03, 0), 0.15, 0.1).map(
+            ([z, y]) => [s * 1.0 + dx, y, z] as [number, number, number],
+          ),
+        ),
+      ),
+    };
+  }, []);
 
   /**
    * Re-project UVs across the trunk once it is in the scene. Doing it here
@@ -666,7 +844,7 @@ function Trunk({
         projectUV(m.geometry);
       }
     });
-  }, [surf]);
+  }, [surf, lidGeo]);
 
   // Nothing else holds these, so the canvas unmounting is the only chance to
   // give the GPU its memory back.
@@ -674,20 +852,36 @@ function Trunk({
     () => () => Object.values(surf).forEach((t) => t.dispose()),
     [surf],
   );
+  useEffect(
+    () => () => {
+      lidGeo.outer.dispose();
+      lidGeo.lining.dispose();
+      [...lidGeo.endOut, ...lidGeo.endIn, ...lidGeo.bands].forEach((g) =>
+        g.dispose(),
+      );
+    },
+    [lidGeo],
+  );
 
-  useFrame(() => {
+  useFrame((state) => {
     const p = clamp01(pack.current);
     const shut = clamp01((p - LID_START) / (1 - LID_START));
     if (lid.current) lid.current.rotation.x = -(1 - easeOut(shut)) * MAX_OPEN;
-    // Swings a good deal further round as it shuts than it used to: the act
-    // ends on the closed trunk, and squaring it up to the viewer makes that
-    // the deliberate final pose rather than a box that happens to be shut.
-    if (root.current) root.current.rotation.y = -0.42 + easeOut(shut) * 0.26;
+    if (root.current) {
+      // A slow turntable: the trunk starts three-quarter on and comes round to
+      // face the reader as it shuts, so the closing is the deliberate last pose.
+      root.current.rotation.y = -0.86 + easeInOut(p) * 0.7;
+      root.current.position.y =
+        -0.78 + Math.sin(state.clock.elapsedTime * 0.9) * 0.012;
+    }
+    // Light spills out of the open trunk onto the pieces and the lining, and
+    // goes out as the lid comes down.
+    if (glow.current) glow.current.intensity = 0.12 + 1.0 * (1 - easeOut(shut));
   });
 
-  // Shared by the lid's panel and rim walls, which are now several meshes
-  // rather than one slab.
-  const shell = (
+  // The shell on the body is closed boxes; on the lid it is open surfaces, so it
+  // is drawn from both sides and lit as whichever face is showing.
+  const shell = (side: THREE.Side = THREE.FrontSide) => (
     <meshStandardMaterial
       /* White, because surf.albedo already carries the maroon and the gold
          buti. Tinting on top of it would drag the gold toward maroon. */
@@ -699,6 +893,7 @@ function Trunk({
       bumpScale={0.34}
       roughnessMap={surf.grain}
       envMapIntensity={0.18}
+      side={side}
     />
   );
 
@@ -716,11 +911,9 @@ function Trunk({
   );
 
   /**
-   * A proper metal now that there is a studio to reflect. metalness sits at
-   * 0.95 rather than 0.85 — the lower value was compensating for the missing
-   * environment by leaving a sliver of diffuse in, which is what gave the
-   * hardware its flat, painted look. Roughness is up too: polished brass on a
-   * trunk that has been packed and carried should be satin, not chrome.
+   * A proper metal now that there is a studio to reflect: metalness 0.96 with a
+   * satin roughness, because brass on a trunk that has been packed and carried
+   * should not be chrome.
    */
   const gold = (
     <meshStandardMaterial
@@ -732,13 +925,48 @@ function Trunk({
       envMapIntensity={1.35}
     />
   );
+  const goldDS = (
+    <meshStandardMaterial
+      color={GOLD}
+      roughness={0.26 / BRASS_MEAN}
+      metalness={0.96}
+      map={surf.brassTint}
+      roughnessMap={surf.brass}
+      envMapIntensity={1.35}
+      side={THREE.DoubleSide}
+    />
+  );
+  const goldDark = (
+    <meshStandardMaterial
+      color={GOLD_DARK}
+      roughness={0.3 / BRASS_MEAN}
+      metalness={0.96}
+      map={surf.brassTint}
+      roughnessMap={surf.brass}
+      envMapIntensity={1.3}
+    />
+  );
+
+  // Rivets down the two front straps.
+  const bodyRivets = useMemo(() => {
+    const out: [number, number, number][] = [];
+    for (const sx of [-1, 1])
+      for (const dx of [-0.04, 0.04])
+        for (let y = 0.2; y < H - 0.12; y += 0.17)
+          out.push([sx * 1.0 + dx, y, D / 2 + 0.03]);
+    return out;
+  }, []);
+
+  const corners = [-1, 1].flatMap((sx) =>
+    [-1, 1].map((sz) => [sx, sz] as const),
+  );
 
   return (
     <group
       ref={root}
-      position={[0, -0.85, 0]}
+      position={[0, -0.78, 0]}
       scale={0.86}
-      rotation={[0.05, -0.42, 0]}
+      rotation={[0.05, -0.86, 0]}
     >
       {/* Four walls and a floor, so the inside is genuinely hollow */}
       {[
@@ -750,13 +978,13 @@ function Trunk({
         <RoundedBox
           key={i}
           args={w.args as [number, number, number]}
-          radius={0.02}
-          smoothness={3}
+          radius={0.035}
+          smoothness={2}
           position={w.pos as [number, number, number]}
           castShadow
           receiveShadow
         >
-          {shell}
+          {shell()}
         </RoundedBox>
       ))}
       <mesh position={[0, WALL / 2, 0]} receiveShadow>
@@ -814,10 +1042,18 @@ function Trunk({
         </mesh>
       ))}
 
-      {/* Gold frame: a closed rectangle at the rim, another at the foot, and
-          four posts joining them down the corners. The rim used to be two
-          rails front and back only, which stopped dead at each corner. */}
-      {[H, RAIL / 2].map((y, tier) =>
+      {/* Warm light inside the trunk, strongest while it is open. */}
+      <pointLight
+        ref={glow}
+        position={[0, 0.85, 0.15]}
+        color="#ffb067"
+        distance={3.6}
+        decay={2}
+        intensity={1.1}
+      />
+
+      {/* Bands round the rim and the foot */}
+      {[H - RAIL / 2, RAIL / 2 + 0.02].map((y, tier) =>
         [
           { pos: [0, y, D / 2 - WALL / 2], args: [W, RAIL, TRIM] },
           { pos: [0, y, -(D / 2 - WALL / 2)], args: [W, RAIL, TRIM] },
@@ -827,56 +1063,88 @@ function Trunk({
           <mesh
             key={`frame${tier}${i}`}
             position={r.pos as [number, number, number]}
-            castShadow
           >
             <boxGeometry args={r.args as [number, number, number]} />
             {gold}
           </mesh>
         )),
       )}
-      {[-1, 1].map((sx) =>
-        [-1, 1].map((sz) => (
-          <mesh
-            key={`post${sx}${sz}`}
-            position={[sx * (W / 2 - WALL / 2), H / 2, sz * (D / 2 - WALL / 2)]}
-            castShadow
+      {/* Corner caps, top and bottom: the part of a trunk that takes the knocks */}
+      {corners.map(([sx, sz]) =>
+        [0.13, H - 0.13].map((y) => (
+          <RoundedBox
+            key={`cc${sx}${sz}${y}`}
+            args={[0.21, 0.23, 0.21]}
+            radius={0.045}
+            smoothness={2}
+            position={[sx * (W / 2 - 0.045), y, sz * (D / 2 - 0.045)]}
           >
-            <boxGeometry args={[TRIM, H, TRIM]} />
             {gold}
-          </mesh>
+          </RoundedBox>
         )),
       )}
+      {/* Straps down the front and back */}
+      {[-1, 1].flatMap((sx) =>
+        [1, -1].map((sz) => (
+          <RoundedBox
+            key={`strap${sx}${sz}`}
+            args={[0.16, H - 0.1, 0.03]}
+            radius={0.012}
+            smoothness={2}
+            position={[sx * 1.0, H / 2, sz * (D / 2 + 0.01)]}
+          >
+            {gold}
+          </RoundedBox>
+        )),
+      )}
+      <Rivets points={bodyRivets} material={gold} />
 
-      {/* Front hardware: two corner latches and a centre handle */}
-      {[-1, 1].map((s) => (
+      {/* Bun feet */}
+      {corners.map(([sx, sz]) => (
         <mesh
-          key={`latch${s}`}
-          position={[s * (W / 2 - 0.42), H - 0.2, D / 2 + 0.01]}
-          castShadow
+          key={`foot${sx}${sz}`}
+          position={[sx * (W / 2 - 0.2), -0.025, sz * (D / 2 - 0.2)]}
+          scale={[1, 0.7, 1]}
         >
-          <boxGeometry args={[0.34, 0.3, 0.06]} />
-          {gold}
+          <sphereGeometry args={[0.105, 16, 12]} />
+          {goldDark}
         </mesh>
       ))}
-      <mesh position={[0, H - 0.22, D / 2 + 0.01]} castShadow>
-        <boxGeometry args={[0.26, 0.2, 0.05]} />
-        {gold}
-      </mesh>
+
+      {/* The lock is the logo: a solid brass monogram, a key by design, mounted
+          where a lock plate would be. */}
       <mesh
-        position={[0, H - 0.52, D / 2 + 0.03]}
-        rotation={[Math.PI / 2, 0, 0]}
+        geometry={lock}
+        position={[0, 0.5, D / 2 + 0.004]}
         castShadow
+        receiveShadow
       >
-        <torusGeometry args={[0.22, 0.035, 12, 24, Math.PI]} />
-        <meshStandardMaterial
-          color={GOLD_DARK}
-          roughness={0.3 / BRASS_MEAN}
-          metalness={0.96}
-          map={surf.brassTint}
-          roughnessMap={surf.brass}
-          envMapIntensity={1.3}
-        />
+        {goldDS}
       </mesh>
+
+      {/* A carrying handle on each end: a bar held off the wall by two posts */}
+      {[-1, 1].map((sx) => (
+        <group key={`handle${sx}`} position={[sx * (W / 2), H * 0.56, 0]}>
+          {[-0.26, 0.26].map((z) => (
+            <mesh
+              key={z}
+              position={[sx * 0.07, 0, z]}
+              rotation={[0, 0, Math.PI / 2]}
+            >
+              <cylinderGeometry args={[0.032, 0.04, 0.14, 12]} />
+              {gold}
+            </mesh>
+          ))}
+          <mesh
+            position={[sx * 0.15, 0, 0]}
+            rotation={[Math.PI / 2, 0, 0]}
+            castShadow
+          >
+            <cylinderGeometry args={[0.03, 0.03, 0.58, 14]} />
+            {goldDark}
+          </mesh>
+        </group>
+      ))}
 
       {/* Items live inside the body, so the walls clip them as they land */}
       <Suspense fallback={null}>
@@ -885,167 +1153,100 @@ function Trunk({
         ))}
       </Suspense>
 
-      {/* Lid — hinged on the back rim */}
+      {/* Lid — hinged on the back rim. A vaulted shell, built from the outline. */}
       <group ref={lid} position={[0, H, -D / 2]}>
-        {/* The lid is a shallow box in its own right, not a slab: a top
-            panel and four rim walls, built the same way as the body below.
-            It used to be one solid RoundedBox with a flat lining plane
-            stretched across its mouth, which looked right only while shut —
-            open it and you were looking at a flat panel where the inside of
-            a trunk lid should be. */}
-        <RoundedBox
-          args={[W, WALL, D]}
-          radius={0.02}
-          smoothness={3}
-          position={[0, LID_H - WALL / 2, D / 2]}
-          castShadow
-          receiveShadow
-        >
-          {shell}
-        </RoundedBox>
-        {[
-          {
-            pos: [0, (LID_H - WALL) / 2, WALL / 2],
-            args: [W, LID_H - WALL, WALL],
-          },
-          {
-            pos: [0, (LID_H - WALL) / 2, D - WALL / 2],
-            args: [W, LID_H - WALL, WALL],
-          },
-          {
-            pos: [-W / 2 + WALL / 2, (LID_H - WALL) / 2, D / 2],
-            args: [WALL, LID_H - WALL, D],
-          },
-          {
-            pos: [W / 2 - WALL / 2, (LID_H - WALL) / 2, D / 2],
-            args: [WALL, LID_H - WALL, D],
-          },
-        ].map((w, i) => (
-          <RoundedBox
-            key={`lidwall${i}`}
-            args={w.args as [number, number, number]}
-            radius={0.02}
-            smoothness={3}
-            position={w.pos as [number, number, number]}
-            castShadow
-            receiveShadow
-          >
-            {shell}
-          </RoundedBox>
+        <mesh geometry={lidGeo.outer} castShadow receiveShadow>
+          {shell(THREE.DoubleSide)}
+        </mesh>
+        {lidGeo.endOut.map((g, i) => (
+          <mesh key={`eo${i}`} geometry={g} castShadow receiveShadow>
+            {shell(THREE.DoubleSide)}
+          </mesh>
         ))}
-        {/* Lining, recessed under the top panel rather than across the mouth */}
-        <mesh
-          position={[0, LID_H - WALL - 0.01, D / 2]}
-          rotation={[Math.PI / 2, 0, 0]}
-        >
-          <planeGeometry args={[W - WALL * 3, D - WALL * 3]} />
+        {/* Lining under the vault, and on the inside of each end panel */}
+        <mesh geometry={lidGeo.lining} receiveShadow>
           {cloth}
         </mesh>
-        {/* and carried down the inside of the rim, as in the body */}
-        {[
-          {
-            pos: [0, (LID_H - WALL) / 2, WALL + 0.01],
-            rot: [0, 0, 0],
-            args: [W - WALL * 3, LID_H - WALL * 2],
-          },
-          {
-            pos: [0, (LID_H - WALL) / 2, D - WALL - 0.01],
-            rot: [0, Math.PI, 0],
-            args: [W - WALL * 3, LID_H - WALL * 2],
-          },
-          {
-            pos: [-W / 2 + WALL + 0.01, (LID_H - WALL) / 2, D / 2],
-            rot: [0, Math.PI / 2, 0],
-            args: [D - WALL * 3, LID_H - WALL * 2],
-          },
-          {
-            pos: [W / 2 - WALL - 0.01, (LID_H - WALL) / 2, D / 2],
-            rot: [0, -Math.PI / 2, 0],
-            args: [D - WALL * 3, LID_H - WALL * 2],
-          },
-        ].map((f, i) => (
-          <mesh
-            key={`lidlin${i}`}
-            position={f.pos as [number, number, number]}
-            rotation={f.rot as [number, number, number]}
-            receiveShadow
-          >
-            <planeGeometry args={f.args as [number, number]} />
+        {lidGeo.endIn.map((g, i) => (
+          <mesh key={`ei${i}`} geometry={g} receiveShadow>
             {cloth}
           </mesh>
         ))}
-        {/* The lid carries the same frame on the same x/z offsets, so when it
-            shuts its posts sit directly over the body's and the gold reads as
-            one run from foot to lid rather than two separate cages. */}
+
+        {/* Brass bands following the curve, riveted down both edges */}
+        {lidGeo.bands.map((g, i) => (
+          <mesh key={`band${i}`} geometry={g}>
+            {goldDS}
+          </mesh>
+        ))}
+        <Rivets points={lidGeo.rivets} material={gold} radius={0.022} />
+
+        {/* A band round the mouth of the lid, and the corner caps */}
         {[
-          {
-            pos: [0, LID_H + PROUD - RAIL / 2, WALL / 2],
-            args: [W, RAIL, TRIM],
-          },
-          {
-            pos: [0, LID_H + PROUD - RAIL / 2, D - WALL / 2],
-            args: [W, RAIL, TRIM],
-          },
-          {
-            pos: [W / 2 - WALL / 2, LID_H + PROUD - RAIL / 2, D / 2],
-            args: [TRIM, RAIL, D],
-          },
-          {
-            pos: [-(W / 2 - WALL / 2), LID_H + PROUD - RAIL / 2, D / 2],
-            args: [TRIM, RAIL, D],
-          },
+          { pos: [0, 0.026, D - WALL / 2], args: [W, 0.052, TRIM] },
+          { pos: [0, 0.026, WALL / 2], args: [W, 0.052, TRIM] },
+          { pos: [W / 2 - WALL / 2, 0.026, D / 2], args: [TRIM, 0.052, D] },
+          { pos: [-(W / 2 - WALL / 2), 0.026, D / 2], args: [TRIM, 0.052, D] },
         ].map((r, i) => (
-          <mesh
-            key={`lidframe${i}`}
-            position={r.pos as [number, number, number]}
-            castShadow
-          >
+          <mesh key={`mouth${i}`} position={r.pos as [number, number, number]}>
             <boxGeometry args={r.args as [number, number, number]} />
             {gold}
           </mesh>
         ))}
-        {[-1, 1].map((sx) =>
-          [-1, 1].map((sz) => (
-            <mesh
-              key={`lidpost${sx}${sz}`}
-              /* Top ends inside the rail above it, bottom pokes just below
-                 the lid's lower edge — so neither end is flush with anything. */
-              position={[
-                sx * (W / 2 - WALL / 2),
-                (LID_H - 0.028) / 2,
-                sz === 1 ? D - WALL / 2 : WALL / 2,
-              ]}
-              castShadow
-            >
-              <boxGeometry args={[TRIM, LID_H - 0.012, TRIM]} />
-              {gold}
-            </mesh>
-          )),
-        )}
-        {[-1, 1].map((s) => (
-          <mesh
-            key={`lt${s}`}
-            position={[s * (W / 2 - 0.42), LID_H / 2, D - 0.02]}
-            castShadow
+        {corners.map(([sx, sz]) => (
+          <RoundedBox
+            key={`lc${sx}${sz}`}
+            args={[0.21, 0.2, 0.21]}
+            radius={0.045}
+            smoothness={2}
+            position={[sx * (W / 2 - 0.045), 0.1, sz > 0 ? D - 0.045 : 0.045]}
           >
-            <boxGeometry args={[0.34, LID_H - 0.08, 0.06]} />
             {gold}
-          </mesh>
+          </RoundedBox>
         ))}
+
+        {/* The catch: a small tab hanging from the lid, closing just above the lock */}
+        <RoundedBox
+          args={[0.2, 0.3, 0.035]}
+          radius={0.03}
+          smoothness={2}
+          position={[0, -0.06, D + 0.05]}
+          castShadow
+        >
+          {gold}
+        </RoundedBox>
+        <mesh position={[0, -0.16, D + 0.073]}>
+          <circleGeometry args={[0.02, 16]} />
+          {goldDark}
+        </mesh>
       </group>
     </group>
   );
+}
+
+/** A little parallax: the camera leans toward the pointer and settles back. */
+function Rig() {
+  useFrame((state) => {
+    const { camera, pointer } = state;
+    camera.position.x += (3.0 + pointer.x * 0.5 - camera.position.x) * 0.04;
+    camera.position.y += (4.5 + pointer.y * 0.3 - camera.position.y) * 0.04;
+    camera.lookAt(0, 0.15, 0);
+  });
+  return null;
 }
 
 export default function TrunkScene({
   pack,
   items,
   active,
+  onReady,
 }: {
   pack: { current: number };
   items: string[];
   /** False while the act is off screen: the canvas stays mounted but idle. */
   active: boolean;
+  /** Called once the first frame has been drawn, so the page can reveal the canvas. */
+  onReady?: () => void;
 }) {
   /**
    * Phones pay for every fragment twice over: a 3x device pixel ratio on a
@@ -1063,13 +1264,21 @@ export default function TrunkScene({
          back to PCFShadowMap and warns on every renderer it builds. Asking
          for the fallback directly renders identically and stays quiet. */
       shadows="percentage"
-      frameloop={active ? "always" : "never"}
-      dpr={small ? [1, 1.5] : [1, 2]}
+      /* "demand" rather than "never" while off screen: the scene still draws its first
+         frame, so a canvas that mounts before it is in view is not blank when it arrives. */
+      frameloop={active ? "always" : "demand"}
+      onCreated={({ invalidate }) => {
+        invalidate();
+        // Two frames: one to build, one that is certainly on screen.
+        requestAnimationFrame(() => requestAnimationFrame(() => onReady?.()));
+      }}
+      dpr={small ? [1, 1.25] : [1, 1.5]}
       camera={{ position: [3.0, 4.5, 6.9], fov: 32 }}
       gl={{ antialias: true, alpha: true }}
       style={{ background: "transparent" }}
     >
       <Studio />
+      <Rig />
       {/* Lower than it was: the environment now supplies most of the ambient
           term, and leaving this at 0.85 on top of it flattened the shading. */}
       {/* Warm, but only just: a fully golden ambient tipped the whole trunk
@@ -1082,6 +1291,8 @@ export default function TrunkScene({
         color="#fff8ee"
         castShadow
         shadow-mapSize={small ? [512, 512] : [1024, 1024]}
+        shadow-bias={-0.0006}
+        shadow-normalBias={0.02}
         shadow-camera-left={-5}
         shadow-camera-right={5}
         shadow-camera-top={5}
@@ -1115,6 +1326,7 @@ export default function TrunkScene({
         opacity={0.26}
         scale={10}
         blur={4.2}
+        resolution={256}
         far={4}
         color={MAROON_DEEP}
       />

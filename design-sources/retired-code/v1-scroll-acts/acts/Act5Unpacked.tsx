@@ -6,7 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import Countdown from "@/components/Countdown";
 import NotifyForm from "@/components/NotifyForm";
-import { acts, features, site } from "@/lib/site";
+import { acts, features, launchLabel, site } from "@/lib/site";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -45,14 +45,14 @@ export default function Act5Unpacked() {
             <span className="font-display text-maroon block text-[clamp(2.2rem,5vw,3.6rem)]">
               {act.label}
             </span>
-            <span className="text-olive mt-3 block text-[clamp(0.8rem,1.45vw,1rem)] tracking-[0.3em] uppercase">
+            <span className="text-olive mt-3 block text-[clamp(0.8rem,1.45vw,1rem)] tracking-[0.22em] uppercase">
               {act.sub}
             </span>
           </h2>
 
           <p className="a5-rise text-ink/70 mt-7 max-w-lg text-[clamp(1rem,2vw,1.15rem)] leading-relaxed font-light">
-            The first trunk opens in Hyderabad soon. Leave your email and
-            you&apos;ll hear about it before it goes up on Instagram.
+            Trunk No. 02 opens in Hyderabad on {launchLabel}. Leave your email
+            and you&apos;ll hear before it goes up on Instagram.
           </p>
 
           {features.countdown && (
@@ -70,14 +70,14 @@ export default function Act5Unpacked() {
               href={site.social.instagram}
               target="_blank"
               rel="noreferrer noopener"
-              className="text-maroon/75 hover:text-maroon text-[clamp(0.78rem,1.15vw,0.9rem)] tracking-[0.3em] uppercase transition-colors"
+              className="text-maroon/75 hover:text-maroon text-[clamp(0.78rem,1.15vw,0.9rem)] tracking-[0.22em] uppercase transition-colors"
             >
               Instagram
             </a>
             <span className="bg-maroon/20 h-3 w-px" />
             <a
               href={`mailto:${site.social.email}`}
-              className="text-maroon/75 hover:text-maroon text-[clamp(0.78rem,1.15vw,0.9rem)] tracking-[0.3em] uppercase transition-colors"
+              className="text-maroon/75 hover:text-maroon text-[clamp(0.78rem,1.15vw,0.9rem)] tracking-[0.22em] uppercase transition-colors"
             >
               Email
             </a>

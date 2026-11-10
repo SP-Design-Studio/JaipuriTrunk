@@ -6,7 +6,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import Trunk from "@/components/Trunk";
-import { acts } from "@/lib/site";
+import { acts, launchLabel } from "@/lib/site";
 import { allItems, photographedItems } from "@/lib/products";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -149,7 +149,7 @@ export default function Act4Trunk() {
             <span className="font-display text-maroon block text-[clamp(2.2rem,5vw,3.6rem)]">
               {act.label}
             </span>
-            <span className="text-olive mt-3 block text-[clamp(0.8rem,1.45vw,1rem)] tracking-[0.3em] uppercase">
+            <span className="text-olive mt-3 block text-[clamp(0.8rem,1.45vw,1rem)] tracking-[0.22em] uppercase">
               {act.sub}
             </span>
           </h2>
@@ -173,7 +173,8 @@ export default function Act4Trunk() {
             className="a4-seal text-ink/65 mx-auto mt-8 max-w-sm text-[clamp(0.95rem,1.8vw,1.08rem)] leading-relaxed font-light opacity-0 md:mx-0"
             style={{ transform: "translateY(1rem)" }}
           >
-            Packed in Jaipur on a Tuesday and put on the train south.
+            What travelled in the first trunk. The second opens on {launchLabel}
+            .
           </p>
         </div>
 

@@ -1,18 +1,25 @@
 import localFont from "next/font/local";
-import { Marcellus, Yatra_One, Jost } from "next/font/google";
+import { Jost } from "next/font/google";
 
-export const marcellus = Marcellus({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-marcellus",
-  display: "swap",
-});
-
-/** Fallback for Shivaraja — also covers any glyph Shivaraja lacks. */
-export const yatra = Yatra_One({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-yatra",
+/**
+ * The Seasons: the display face for every heading, the date and the numerals.
+ * Light is the working weight; Regular is the fallback for anything that asks for
+ * more weight. Upright only: the site uses no italics.
+ */
+export const seasons = localFont({
+  src: [
+    {
+      path: "../../public/fonts/the-seasons/the-seasons-light.woff2",
+      weight: "300",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/the-seasons/the-seasons-regular.woff2",
+      weight: "400",
+      style: "normal",
+    },
+  ],
+  variable: "--font-seasons",
   display: "swap",
 });
 
@@ -20,12 +27,4 @@ export const jost = Jost({
   subsets: ["latin"],
   variable: "--font-jost",
   display: "swap",
-});
-
-/** The brand script, self-hosted from /public/fonts/Shivaraja.ttf. */
-export const shivaraja = localFont({
-  src: "../../public/fonts/Shivaraja.ttf",
-  variable: "--font-shivaraja",
-  display: "swap",
-  preload: true,
 });

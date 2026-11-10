@@ -14,6 +14,7 @@ export default function Sticker({
   tilt = 0,
   sizes = "40vw",
   className = "",
+  tone = "light",
 }: {
   src: string;
   alt: string;
@@ -21,6 +22,8 @@ export default function Sticker({
   tilt?: number;
   sizes?: string;
   className?: string;
+  /** Which ground it sits on, so the shadow reads as a shadow. */
+  tone?: "light" | "dark";
 }) {
   const [failed, setFailed] = useState(false);
   const present = useHasAsset(src);
@@ -38,7 +41,12 @@ export default function Sticker({
         sizes={sizes}
         className="object-contain"
         onError={() => setFailed(true)}
-        style={{ filter: "drop-shadow(0 16px 28px rgba(138,31,75,0.20))" }}
+        style={{
+          filter:
+            tone === "dark"
+              ? "drop-shadow(0 14px 22px rgba(0,0,0,0.38))"
+              : "drop-shadow(0 8px 14px rgba(36,26,29,0.16))",
+        }}
       />
     </div>
   );

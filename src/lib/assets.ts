@@ -24,7 +24,8 @@ export function existingImagePaths(): string[] {
       const abs = join(dir, entry.name);
       const web = `${webPrefix}/${entry.name}`;
       if (entry.isDirectory()) walk(abs, web);
-      else if (/\.(avif|gif|jpe?g|png|svg|webp)$/i.test(entry.name)) found.push(web);
+      else if (/\.(avif|gif|jpe?g|png|svg|webp)$/i.test(entry.name))
+        found.push(web);
     }
   };
 

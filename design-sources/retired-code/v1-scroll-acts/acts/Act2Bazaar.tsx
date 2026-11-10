@@ -155,7 +155,7 @@ export default function Act2Bazaar() {
               <span className="font-display text-petal block text-[clamp(2.4rem,6vw,4.4rem)]">
                 {act.label}
               </span>
-              <span className="text-sage mt-3 block text-[clamp(0.86rem,1.6vw,1.05rem)] tracking-[0.3em] uppercase">
+              <span className="text-sage mt-3 block text-[clamp(0.86rem,1.6vw,1.05rem)] tracking-[0.22em] uppercase">
                 {act.sub}
               </span>
             </h2>
@@ -165,7 +165,7 @@ export default function Act2Bazaar() {
               actually walk in, earrings people stop you to ask about, and bags
               that are still block-printed a metre at a time.
             </p>
-            <p className="text-sage/50 mt-8 flex items-center gap-3 text-[clamp(0.78rem,1.15vw,0.9rem)] tracking-[0.3em] uppercase">
+            <p className="text-sage/50 mt-8 flex items-center gap-3 text-[clamp(0.78rem,1.15vw,0.9rem)] tracking-[0.22em] uppercase">
               <span className="bg-sage/40 h-px w-10" />
               Scroll to walk the stall
             </p>
@@ -212,7 +212,8 @@ export default function Act2Bazaar() {
               And plenty more
             </p>
             <p className="text-petal/60 mt-4 max-w-[30ch] leading-relaxed font-light">
-              still being packed. The first trunk reaches Hyderabad shortly.
+              from Jaipur. The first trunk has been unpacked. The second opens
+              on 6 December.
             </p>
           </div>
         </div>

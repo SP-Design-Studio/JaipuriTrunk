@@ -386,7 +386,7 @@ export default function JourneyThread({
               className="object-contain select-none"
               style={{
                 filter:
-                  "drop-shadow(0 10px 16px color-mix(in srgb, var(--color-maroon) 22%, transparent))",
+                  "drop-shadow(0 6px 10px rgba(36,26,29,0.18))",
               }}
             />
           </div>

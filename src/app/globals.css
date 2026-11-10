@@ -1,30 +1,54 @@
 @import "tailwindcss";
 
 @theme {
-  --color-maroon: #8a1f4b;
-  --color-maroon-deep: #5e1234;
-  --color-rose: #d47c8e;
-  --color-blush: #efc0bc;
-  --color-petal: #f6e5e7;
+  /* The logo's own two colours, sampled from the supplied artwork: the maroon
+     ground (#801834) and the orange (#f49b49). Orange is the only accent;
+     everything else is maroon, cream or ink. */
+  --color-maroon: #801834;
+  --color-maroon-deep: #570f22;
+  --color-rose: #b8445f;
+  --color-blush: #f3cfb0;
+  --color-petal: #f4e1d6;
+  --color-marigold: #f49b49;
+  --color-cream: #f4e8d3;
+  --color-paper: #ebdcc5;
+  --color-ink: #241a1d;
+  /* Still read by the 404, the cursor and the waitlist confirmation. */
   --color-sage: #a8b48a;
   --color-sage-soft: #a0ab89;
   --color-olive: #5e6841;
   --color-olive-deep: #3d4429;
   --color-sand: #cbb8a4;
-  --color-cream: #faf4ee;
-  --color-ink: #241a1d;
 
-  --font-display: var(--font-marcellus), "Marcellus", serif;
-  --font-script: var(--font-shivaraja), var(--font-yatra), cursive;
+  --font-display: var(--font-seasons), "The Seasons", Georgia, serif;
   --font-body: var(--font-jost), ui-sans-serif, system-ui, sans-serif;
+
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 :root {
   color-scheme: light;
-  --edge: 1px solid color-mix(in srgb, var(--color-maroon) 16%, transparent);
+  /* One gutter for the whole page, so every section's edge lines up. */
+  --gutter: clamp(1.25rem, 4vw, 4rem);
+
+  /* One vertical rhythm for the whole page. Width-based units on purpose: spacing
+     in svh changes with the window's height, so the same page looked cramped on a
+     short laptop and loose on a tall monitor.
+       1  a label to its heading, a caption to its picture
+       2  a heading to its text, one related thing to the next
+       3  one block to the next inside a section
+       4  one group to the next
+       section  the top and bottom of a section */
+  --space-1: clamp(0.75rem, 1.1vw, 1rem);
+  --space-2: clamp(1.25rem, 2vw, 1.75rem);
+  --space-3: clamp(2rem, 3.6vw, 3.25rem);
+  --space-4: clamp(3.25rem, 6.4vw, 6rem);
+  --space-section: clamp(5.5rem, 10.5vw, 9.5rem);
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 html {
   background: var(--color-cream);
@@ -40,22 +64,137 @@ body {
   overflow-x: hidden;
 }
 
+/* The loader holds the page still until it hands over to the hero. */
+html.is-loading,
+html.is-loading body {
+  overflow: hidden;
+}
+
 /* Lenis */
-html.lenis, html.lenis body { height: auto; }
-.lenis.lenis-smooth { scroll-behavior: auto !important; }
-.lenis.lenis-stopped { overflow: hidden; }
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
 
-/* Type helpers */
-.font-script { font-family: var(--font-script); }
+/* The type scale, as a few named things instead of a size on every line. */
+.display {
+  font-family: var(--font-display);
+  font-weight: 300;
+  letter-spacing: -0.012em;
+  line-height: 1;
+}
+.label {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+@media (min-width: 1024px) {
+  .label {
+    font-size: 0.78rem;
+  }
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
 
+/* The craft scene: three photographs laid over the sentence, placed in viewport
+   units so the composition holds at any size. */
+.c-fig {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  height: var(--h);
+}
+.c-fig-1 {
+  --x: 6vw;
+  --y: 22svh;
+  --h: 62svh;
+}
+.c-fig-2 {
+  --x: 38vw;
+  --y: 30svh;
+  --h: 54svh;
+}
+.c-fig-3 {
+  left: auto;
+  right: 6vw;
+  --y: 10svh;
+  --h: 46svh;
+}
+@media (max-width: 767px) {
+  /* A staggered column, each photograph clear of the one above and of its caption. */
+  .c-fig-1 {
+    --x: 5vw;
+    --y: 9svh;
+    --h: 29svh;
+  }
+  .c-fig-2 {
+    left: auto;
+    right: 5vw;
+    --y: 42svh;
+    --h: 24svh;
+  }
+  /* Its photograph hugs the right edge, so its caption does too. */
+  .c-fig-2 figcaption {
+    left: auto;
+    right: 0;
+    text-align: right;
+  }
+  .c-fig-3 {
+    left: 9vw;
+    right: auto;
+    --y: 74svh;
+    --h: 18svh;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .c-fig,
+  .c-fig-3 {
+    position: relative;
+    left: auto;
+    top: auto;
+    right: auto;
+    height: auto;
+    width: min(72vw, 420px);
+    margin: var(--space-3) auto;
+  }
+}
+
+/* Handmade card stock, matte: a flat warm paper colour with a barely-there tooth
+   (a pre-baked grain tile, so it costs a bitmap and nothing per frame). No
+   highlights, no fibres, no filters. */
+.paper-card {
+  background-color: #f9f0e1;
+  background-image: url("/images/texture/grain-dark.png");
+  background-size: 256px 256px;
+  box-shadow: inset 0 0 0 1px rgba(120, 80, 40, 0.07);
+}
+
+/* A pre-baked grain tile laid over a section. Plain alpha, no blend modes: a
+   blend mode over a full-screen overlay makes the browser composite everything
+   under it offscreen on every scroll frame. */
 .u-grain::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.045;
-  mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-image: url("/images/texture/grain-dark.png");
+  background-size: 256px 256px;
+  opacity: 0.55;
+}
+/* On the maroon sections the grain lightens instead of darkening. */
+.u-grain-dark::after {
+  background-image: url("/images/texture/grain-light.png");
+  opacity: 0.5;
 }
 
 /* viewport-fit=cover lets content run under the notch and home indicator, so
@@ -70,24 +209,109 @@ body {
  *
  * The class is added from JS only once the custom cursor is actually on
  * screen, never from a media query. Hiding the native pointer in CSS meant
- * anyone the custom cursor did not render for — a window narrower than the
- * md breakpoint, where the cursor element is display:none — was left with no
- * pointer at all.
- *
+ * anyone the custom cursor did not render for was left with no pointer at all.
  * `*` and !important because `cursor` is inherited but any element carrying
- * its own value wins: the UA sets one on textarea, select and summary, and a
- * Tailwind cursor-* utility would too. Naming a handful of tags let the
- * native arrow back through on everything else. */
+ * its own value wins. */
 .cursor-none,
 .cursor-none * {
   cursor: none !important;
 }
 
-::selection { background: var(--color-maroon); color: var(--color-petal); }
+::selection {
+  background: var(--color-maroon);
+  color: var(--color-petal);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-marigold);
+  outline-offset: 3px;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Smoke from the steam engine's stack on the timeline. */
+.d-puff {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: d-puff 2.4s ease-out infinite;
+}
+@keyframes d-puff {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.5);
+  }
+  20% {
+    opacity: 0.35;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-14px, -30px) scale(1.7);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .d-puff {
+    animation: none;
+  }
+}
+
+/* The stall pinboard: a photograph drops onto the board, then its pin is pressed in. */
+.pin-print,
+.pin-rest {
+  transform: rotate(var(--rot));
+  box-shadow:
+    0 1px 2px rgba(36, 26, 29, 0.18),
+    0 10px 22px rgba(36, 26, 29, 0.16);
+}
+.pin-rest {
+  transition: transform 0.6s var(--ease-expo);
+}
+.pin-print {
+  animation: pin-drop 0.8s var(--ease-expo) both;
+  animation-delay: var(--d);
+}
+.pin-print .pin-head {
+  animation: pin-press 0.4s ease-out both;
+  animation-delay: calc(var(--d) + 0.5s);
+}
+.pin-head {
+  transform: translate(-50%, -50%);
+}
+@keyframes pin-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-34px) rotate(calc(var(--rot) - 7deg)) scale(1.06);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(var(--rot));
+  }
+}
+@keyframes pin-press {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -190%) scale(1.6);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pin-print,
+  .pin-print .pin-head {
+    animation: none;
+  }
+}
+
+/* In the phone pile only the top photograph shows its pin. */
+.pin-rest .pin-head {
+  display: none;
 }

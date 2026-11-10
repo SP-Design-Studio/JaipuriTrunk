@@ -3,19 +3,39 @@
 import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import { site } from "@/lib/site";
 
-const UNITS: { key: "days" | "hours" | "minutes" | "seconds"; en: string }[] = [
-  { key: "days", en: "Days" },
-  { key: "hours", en: "Hours" },
-  { key: "minutes", en: "Minutes" },
-  { key: "seconds", en: "Seconds" },
-];
-
-/** -1 means "not yet known" — the server render, before the clock is live. */
+/** -1 means "not yet known": the server render, before the clock is live. */
 const UNKNOWN = -1;
 
-export default function Countdown() {
-  const target = useMemo(() => new Date(site.launchISO).getTime(), []);
+type Unit = {
+  key: "days" | "hours" | "minutes" | "seconds";
+  word: string;
+  short: string;
+};
 
+const UNITS: Unit[] = [
+  { key: "days", word: "Days", short: "d" },
+  { key: "hours", word: "Hours", short: "h" },
+  { key: "minutes", word: "Minutes", short: "m" },
+  { key: "seconds", word: "Seconds", short: "s" },
+];
+
+/**
+ * Time left to the launch, ticking once a second.
+ *
+ * `compact` is the hero's version: one quiet line of numerals. The default is the
+ * large one the sign-up section is built around. Seconds only show in the large
+ * version, where a ticking digit reads as the date getting closer; in a corner of
+ * the hero it would only be a flicker.
+ */
+export default function Countdown({
+  tone = "light",
+  compact = false,
+}: {
+  /** "dark" is for use on the maroon sections. */
+  tone?: "light" | "dark";
+  compact?: boolean;
+}) {
+  const target = useMemo(() => new Date(site.launchISO).getTime(), []);
   const snapshot = useRef(UNKNOWN);
 
   const subscribe = useCallback(
@@ -32,10 +52,11 @@ export default function Countdown() {
     [target],
   );
 
-  const getSnapshot = useCallback(() => snapshot.current, []);
-  const getServerSnapshot = useCallback(() => UNKNOWN, []);
-
-  const total = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const total = useSyncExternalStore(
+    subscribe,
+    useCallback(() => snapshot.current, []),
+    useCallback(() => UNKNOWN, []),
+  );
   const live = total !== UNKNOWN;
 
   const parts = {
@@ -44,29 +65,53 @@ export default function Countdown() {
     minutes: Math.floor(total / 60) % 60,
     seconds: total % 60,
   };
+  const units = compact ? UNITS.slice(0, 3) : UNITS;
+  const dark = tone === "dark";
+
+  if (compact)
+    return (
+      <p
+        className={`flex items-baseline gap-4 ${dark ? "text-cream" : "text-maroon"}`}
+        aria-label={
+          live
+            ? `${parts.days} days, ${parts.hours} hours and ${parts.minutes} minutes to go`
+            : undefined
+        }
+      >
+        {units.map(({ key, short }) => (
+          <span key={key} className="flex items-baseline gap-1">
+            <span className="display tnum text-[clamp(1.3rem,2vw,1.75rem)]">
+              {live ? String(parts[key]).padStart(2, "0") : "––"}
+            </span>
+            <span
+              className={`label ${dark ? "text-cream/55" : "text-maroon/55"}`}
+            >
+              {short}
+            </span>
+          </span>
+        ))}
+      </p>
+    );
 
   return (
-    /* A four-column grid, not a flex row.
-       
-       Flexed, each column was only as wide as its own label, so DAYS and
-       SECONDS produced different column widths and the numbers above them sat
-       at uneven intervals. Equal columns put the digits on a regular beat.
-       
-       It also used to carry `md:justify-start`, left over from when this act
-       had a facade in a left-hand column. That act is a single centred column
-       now, so on desktop the clock was the one thing pulled to the left. */
-    <div className="mx-auto grid w-full max-w-[26rem] grid-cols-4 items-start gap-2 sm:max-w-[30rem]">
-      {UNITS.map(({ key, en }) => (
-        <div key={key} className="text-center">
-          <p className="font-display text-maroon text-[clamp(2rem,6vw,3.6rem)] leading-none tabular-nums">
+    <div
+      className={`grid w-full max-w-[34rem] grid-cols-4 gap-2 ${dark ? "text-cream" : "text-maroon"}`}
+      role="timer"
+      aria-label={
+        live
+          ? `${parts.days} days, ${parts.hours} hours, ${parts.minutes} minutes and ${parts.seconds} seconds to go`
+          : undefined
+      }
+    >
+      {units.map(({ key, word }) => (
+        <div key={key} className="border-current/15 border-t pt-3">
+          <p className="display tnum text-[clamp(2.4rem,5.6vw,4.4rem)]">
             {live ? String(parts[key]).padStart(2, "0") : "––"}
           </p>
-          {/* The trailing letter-space that `tracking` adds after the last
-              glyph is inside the centred box, which nudges the word visibly
-              left of the number above it. Indenting by the same amount puts
-              the glyphs back on the column's centre line. */}
-          <p className="text-olive/70 mt-3 indent-[0.28em] text-[clamp(0.78rem,1.1vw,0.86rem)] tracking-[0.28em] uppercase">
-            {en}
+          <p
+            className={`label mt-2 ${dark ? "text-cream/55" : "text-maroon/55"}`}
+          >
+            {word}
           </p>
         </div>
       ))}

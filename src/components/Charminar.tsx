@@ -35,8 +35,7 @@ export default function Charminar({ className = "" }: { className?: string }) {
         className="h-full w-full object-contain object-bottom select-none"
         onError={() => setFailed(true)}
         style={{
-          filter:
-            "drop-shadow(0 16px 26px color-mix(in srgb, var(--color-maroon) 14%, transparent))",
+          filter: "drop-shadow(0 8px 14px rgba(36,26,29,0.16))",
         }}
       />
     </div>

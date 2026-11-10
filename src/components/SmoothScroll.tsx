@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Lenis from "lenis";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import "@/lib/scroll";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -29,7 +30,7 @@ export default function SmoothScroll() {
       if (!cancelled) ScrollTrigger.refresh();
     };
     const onSettled = () => {
-      // Fonts are the big one: Marcellus and Jost change line heights, which
+      // Fonts are the big one: The Seasons and Jost change line heights, which
       // changes how tall the pinned acts' content is.
       document.fonts?.ready.then(remeasure).catch(remeasure);
       // And once more after the browser has finished its own load-time
@@ -70,6 +71,7 @@ export default function SmoothScroll() {
       touchMultiplier: 1.6,
     });
 
+    window.__lenis = lenis;
     lenis.on("scroll", ScrollTrigger.update);
 
     const raf = (time: number) => lenis.raf(time * 1000);
@@ -79,6 +81,7 @@ export default function SmoothScroll() {
     return () => {
       teardownRefresh();
       gsap.ticker.remove(raf);
+      delete window.__lenis;
       lenis.destroy();
     };
   }, []);

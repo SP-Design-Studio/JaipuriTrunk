@@ -142,12 +142,11 @@ export default function Act1Arrival({ ready }: { ready: boolean }) {
     >
       {/* Copy */}
       <div className="a1-copy relative z-10 flex shrink-0 grow basis-auto flex-col items-center justify-center px-6 py-[2svh] text-center">
-        {/* The status, not the wordmark, is what a first-time visitor needs to
-            read first — this is a pre-launch page, and "coming soon" is the
-            whole message. It used to be a ~1rem eyebrow against a wordmark up
-            to 9rem, so the eye went straight past it. Now it is roughly a
-            third of the wordmark's size: still subordinate to the brand, but
-            large enough to land on first.
+        {/* The edition and its date, not the wordmark, are what a first-time
+            visitor needs to read first: Trunk No. 02, and when. It used to be a
+            ~1rem eyebrow against a wordmark up to 9rem, so the eye went straight
+            past it. Now it is roughly a third of the wordmark's size: still
+            subordinate to the brand, but large enough to land on first.
 
             The date moved onto its own line beneath. At this size the old
             single row ran wider than a phone screen once tracking was added. */}
@@ -157,11 +156,11 @@ export default function Act1Arrival({ ready }: { ready: boolean }) {
               <span className="absolute inline-flex h-full w-full animate-[ping_2.4s_cubic-bezier(0,0,0.2,1)_infinite] rounded-full bg-maroon/60" />
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-maroon" />
             </span>
-            <span className="font-display text-maroon text-[clamp(1.25rem,4.4vw,3rem)] leading-none tracking-[0.28em] uppercase">
+            <span className="font-display text-maroon text-[clamp(1.25rem,4.4vw,3rem)] leading-none tracking-[0.2em] uppercase">
               {site.eyebrow}
             </span>
           </div>
-          <span className="font-display text-maroon/65 text-[clamp(0.78rem,1.6vw,1rem)] tracking-[0.3em] uppercase">
+          <span className="font-display text-maroon/80 text-[clamp(1rem,2.2vw,1.5rem)] tracking-[0.18em] uppercase">
             {launchLabel}
           </span>
         </div>
@@ -196,8 +195,8 @@ export default function Act1Arrival({ ready }: { ready: boolean }) {
           {site.tagline}
         </p>
 
-        <p className="a1-fade text-maroon/50 mt-3 text-[clamp(0.78rem,1.15vw,0.9rem)] tracking-[0.4em] uppercase">
-          {site.city.from} &nbsp;to&nbsp; {site.city.to}
+        <p className="a1-fade text-ink/60 mt-3 max-w-sm text-[clamp(0.88rem,1.3vw,1rem)] leading-relaxed font-light">
+          The first trunk is done. The second opens on {launchLabel}.
         </p>
       </div>
 

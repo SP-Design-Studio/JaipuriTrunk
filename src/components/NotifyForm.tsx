@@ -42,7 +42,7 @@ export default function NotifyForm() {
       setMessage(
         data.already
           ? "We already had this address. Nothing more to do."
-          : "We'll write when the first trunk lands.",
+          : "We'll write before the second trunk opens.",
       );
     } catch (err) {
       setState("error");
@@ -77,7 +77,7 @@ export default function NotifyForm() {
          a left-hand column; the act is a single centred column now, so at
          desktop width it was left-aligning the form inside it — 448px sitting
          in a 512px column, 32px off the centre every other element sits on. */
-      className="mx-auto w-full max-w-md"
+      className="w-full max-w-[34rem]"
     >
       <div className="border-maroon/25 focus-within:border-maroon/70 flex items-center gap-3 border-b pb-2 transition-colors">
         <label htmlFor="notify-email" className="sr-only">
@@ -111,7 +111,7 @@ export default function NotifyForm() {
              min-h-11 grow the hit area without changing how the label looks;
              -mr-2 keeps the text optically aligned to the field's right edge
              despite the new padding. */
-          className="text-maroon hover:text-maroon-deep shrink-0 font-display -mr-2 inline-flex min-h-11 items-center px-2 text-[clamp(0.78rem,1.2vw,0.92rem)] tracking-[0.3em] uppercase transition-colors disabled:opacity-50"
+          className="text-maroon hover:text-maroon-deep shrink-0 font-display -mr-2 inline-flex min-h-11 items-center px-2 text-[clamp(0.78rem,1.2vw,0.92rem)] tracking-[0.22em] uppercase transition-colors disabled:opacity-50"
         >
           {state === "sending" ? "Sending" : "Notify me"}
         </button>
@@ -122,7 +122,7 @@ export default function NotifyForm() {
         </p>
       )}
       <p className="text-ink/40 mt-3 text-[clamp(0.8rem,1.3vw,0.98rem)] font-light">
-        One email when we launch. Nothing else, ever.
+        One email before the second trunk opens. Nothing else, ever.
       </p>
     </form>
   );

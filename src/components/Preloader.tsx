@@ -1,212 +1,172 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
+import { HERO_MARK_SIZE, Monogram } from "@/components/Logo";
 import { launchLabel, site } from "@/lib/site";
 
+/** The hero's own backdrop, so lifting this away leaves nothing to notice. */
+const GROUND =
+  "radial-gradient(62% 58% at 50% 44%, #8d1c3b 0%, #801834 56%, #6a1229 100%)";
+
 /**
- * The curtain is one element, not a row of panels: scaling adjacent flex
- * children leaves hairline seams that the page shows through mid-animation,
- * which is what broke the old reveal on mobile.
+ * The loader is one gesture, not a curtain.
  *
- * Its lower edge is a scalloped arcade of cusped arches — the jharokha motif —
- * so lifting it reads as a jali screen being raised rather than a plain wipe.
+ * The monogram is unveiled top to bottom on the maroon ground while a single
+ * hairline fills beneath it. Then it travels: it glides to exactly where the
+ * hero's monogram sits and the ground fades out around it, so the loader's mark
+ * and the hero's are the same object and the page is simply there. There is no
+ * wipe and no second reveal.
  *
- * The reveal is built from four things that used to be one: the rule fills as
- * the count runs, the arcade stretches under the lift, the type lags the cloth
- * carrying it, and the marks leave bottom-up so the wordmark is last out.
+ * It sizes itself from the hero's mark (`[data-hero-mark]`), so the hand-off
+ * stays exact at any screen size. Reduced motion skips the travel and fades.
  */
-
-const SCALLOPS = 9;
-
-function ScallopedEdge() {
-  // One cusped arch per bay, drawn across a 0..100 viewBox so it stretches to
-  // any width without distorting the curve's character.
-  const w = 100 / SCALLOPS;
-  const arches = Array.from({ length: SCALLOPS }, (_, i) => {
-    const x = i * w;
-    return `M${x} 0 C${x} 14 ${x + w * 0.18} 20 ${x + w / 2} 20 C${x + w * 0.82} 20 ${x + w} 14 ${x + w} 0 Z`;
-  }).join(" ");
-
-  return (
-    <svg
-      viewBox="0 0 100 20"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-      className="pl-arcade absolute inset-x-0 top-full h-[7vh] w-full origin-top"
-      fill="currentColor"
-    >
-      <path d={arches} />
-    </svg>
-  );
-}
-
 export default function Preloader({
-  /** Fired as the curtain starts lifting, so the hero animates in behind it. */
+  /** Fired as the mark lands, so the hero's text rises as it settles. */
   onReveal,
-  /** Fired once the curtain is fully clear and this can unmount. */
+  /** Fired once the loader is gone and can unmount. */
   onFinished,
 }: {
   onReveal: () => void;
   onFinished: () => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
-  const [pct, setPct] = useState(0);
 
   useEffect(() => {
-    const counter = { v: 0 };
-    const tl = gsap.timeline({ onComplete: onFinished });
+    const el = root.current;
+    if (!el) return;
+    const html = document.documentElement;
+    html.classList.add("is-loading");
 
-    tl.to(counter, {
-      v: 100,
-      duration: 1.6,
-      ease: "power2.inOut",
-      onUpdate: () => setPct(Math.round(counter.v)),
-    })
-      // The rule fills off the same clock as the numeral, so they are one
-      // gesture rather than a bar and a number that happen to agree.
-      .to(
-        ".pl-progress",
-        { scaleX: 1, duration: 1.6, ease: "power2.inOut" },
-        "<",
-      )
-      // A touch of overshoot downward before the lift, so the curtain feels
-      // like weighted cloth rather than a sliding rectangle.
-      .to(
-        ".pl-curtain",
-        { yPercent: 3, duration: 0.34, ease: "power2.out" },
-        "-=0.1",
-      )
-      .to(".pl-curtain", {
-        yPercent: -114,
-        duration: 1.35,
-        ease: "power3.inOut",
-      })
-      /**
-       * The arcade stretches as the curtain goes up and settles as it clears.
-       *
-       * The cusped arches are the one piece of ornament in the whole reveal and
-       * a rigid lift showed them for a fraction of a second on the way past.
-       * Elongating them mid-lift keeps them on screen through the fastest part
-       * of the ease, and reads as cloth taking its own weight.
-       */
-      .to(".pl-arcade", { scaleY: 2.4, duration: 0.8, ease: "power2.out" }, "<")
-      .to(".pl-arcade", { scaleY: 1, duration: 0.5, ease: "power2.in" })
-      /**
-       * The wordmark lags the curtain instead of being painted on it.
-       *
-       * Moving the stage down while the curtain moves up leaves the type
-       * trailing its own cloth by a few percent, which is the difference
-       * between something being carried and something being printed.
-       */
-      .to(
-        ".pl-stage",
-        { yPercent: 9, duration: 0.9, ease: "power2.in" },
-        "<-0.8",
-      )
-      /**
-       * The marks leave from the bottom up, not all at once.
-       *
-       * `from: "end"` reverses DOM order so the date goes first and the
-       * wordmark last — it is the thing the visitor came for, so it is the last
-       * thing to let go. The old 0.04s stagger across four elements resolved in
-       * 0.12s, which is simultaneous as far as an eye is concerned.
-       */
-      .to(
-        ".pl-fade",
-        {
-          opacity: 0,
-          duration: 0.5,
-          ease: "power2.in",
-          stagger: { each: 0.09, from: "end" },
-        },
-        "<0.1",
-      )
-      .call(onReveal, undefined, "<0.1");
-
-    /**
-     * Development-only handles for photographing the curtain.
-     *
-     * The reveal is GSAP on requestAnimationFrame rather than CSS animation, so
-     * devtools cannot slow it down or step through it — and it is over in about
-     * three seconds, once, on first load. These make it sit still long enough
-     * to look at:
-     *
-     *   ?preloader=hold        freeze at 1.5s: curtain down, bar full
-     *   ?preloader=hold:1.9    freeze just after the lift begins
-     *   ?preloader=hold:2.5    freeze mid-lift, arcade stretched
-     *   ?preloader=slow        play the whole thing at a seventh speed
-     *
-     * Stripped in production: `process.env.NODE_ENV` is inlined at build time,
-     * so the branch and everything in it disappears from the bundle.
-     */
-    if (process.env.NODE_ENV !== "production") {
-      const mode = new URLSearchParams(window.location.search).get("preloader");
-      if (mode === "slow") tl.timeScale(0.15);
-      else if (mode?.startsWith("hold")) {
-        const at = Number(mode.split(":")[1]);
-        // The second argument is `suppressEvents`, which defaults to TRUE — so
-        // a plain pause(t) seeks without firing onUpdate and the counter stays
-        // at 000 while the bar beside it reads full. Passing false renders the
-        // frame properly.
-        tl.pause(Number.isFinite(at) ? at : 1.5, false);
-      }
+    // Development only (stripped from production builds): `?preloader=skip` goes
+    // straight to the page, for testing everything behind the loader.
+    if (
+      process.env.NODE_ENV !== "production" &&
+      new URLSearchParams(window.location.search).get("preloader") === "skip"
+    ) {
+      html.classList.remove("is-loading");
+      onReveal();
+      onFinished();
+      return;
     }
 
-    if (root.current) root.current.style.pointerEvents = "none";
+    const reduce = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const hero = document.querySelector<HTMLElement>("[data-hero-mark]");
+    const target = hero?.getBoundingClientRect();
+
+    const done = () => {
+      html.classList.remove("is-loading");
+      onFinished();
+    };
+
+    // The mark is already sized and centred by CSS (the same size as the hero's),
+    // so nothing is measured before first paint. Taking over its position in
+    // pixels here is what lets it travel to the hero's later.
+    const mark = el.querySelector<HTMLElement>(".pl-mark");
+    if (mark) {
+      const m = mark.getBoundingClientRect();
+      gsap.set(mark, {
+        x: (window.innerWidth - m.width) / 2,
+        y: (window.innerHeight - m.height) / 2 - 18,
+      });
+    }
+    gsap.set(".pl-line", { scaleX: 0 });
+    gsap.set(".pl-label", { opacity: 0, y: 8 });
+
+    if (reduce || !target) {
+      gsap.set(".pl-mark", { clipPath: "inset(0 0 0% 0)" });
+      const tl = gsap.timeline({ onComplete: done });
+      tl.to(".pl-label", { opacity: 1, y: 0, duration: 0.4 })
+        .call(onReveal, undefined, "+=0.3")
+        .to(el, { opacity: 0, duration: 0.5, ease: "power2.out" }, "<");
+      return () => {
+        tl.kill();
+        html.classList.remove("is-loading");
+      };
+    }
+
+    gsap.set(".pl-mark", { clipPath: "inset(0 0 100% 0)" });
+
+    // The unveil is the minimum; the hand-off waits for the type to be ready so
+    // the hero never swaps fonts under the visitor's eyes.
+    let fontsReady = false;
+    const ready = Promise.race([
+      document.fonts?.ready ?? Promise.resolve(),
+      new Promise((r) => window.setTimeout(r, 2500)),
+    ]).then(() => {
+      fontsReady = true;
+    });
+
+    const tl = gsap.timeline();
+    tl.to(
+      ".pl-mark",
+      { clipPath: "inset(0 0 0% 0)", duration: 1.5, ease: "power2.inOut" },
+      0.15,
+    )
+      .to(".pl-line", { scaleX: 1, duration: 1.5, ease: "power2.inOut" }, 0.15)
+      .to(
+        ".pl-label",
+        { opacity: 1, y: 0, duration: 0.9, ease: "power3.out" },
+        0.7,
+      )
+      .call(() => {
+        const go = () => {
+          // Re-measure: the hero may have settled since the first look.
+          const t = hero?.getBoundingClientRect() ?? target;
+          const out = gsap.timeline({ onComplete: done });
+          out
+            .to(
+              ".pl-label,.pl-line",
+              { opacity: 0, duration: 0.45, ease: "power2.out" },
+              0,
+            )
+            .to(
+              ".pl-mark",
+              { x: t.left, y: t.top, duration: 1.15, ease: "power3.inOut" },
+              0,
+            )
+            .to(
+              ".pl-ground",
+              { opacity: 0, duration: 0.95, ease: "power2.inOut" },
+              0.25,
+            )
+            .call(onReveal, undefined, 0.7);
+        };
+        if (fontsReady) go();
+        else void ready.then(go);
+      });
 
     return () => {
       tl.kill();
+      html.classList.remove("is-loading");
     };
   }, [onReveal, onFinished]);
 
   return (
-    <div ref={root} className="fixed inset-0 z-[900] overflow-hidden">
-      <div className="pl-curtain text-maroon-deep absolute inset-0 bg-maroon-deep">
-        <ScallopedEdge />
-        <div className="pl-stage absolute inset-0 grid place-items-center px-6">
-          <div className="text-center">
-            <p className="pl-fade leading-none">
-              <span className="font-script text-petal text-[clamp(2.2rem,8vw,5.5rem)]">
-                {site.nameScript}
-              </span>
-              <span className="font-display text-sage text-[clamp(1.8rem,6.5vw,4.4rem)] tracking-[0.14em]">
-                {site.nameDisplay}
-              </span>
-            </p>
-            {/* The rule is the progress bar. The numeral in the corner used to
-                be the only thing that knew anything was loading, and nothing
-                on the page acknowledged it; now the count and the fill run off
-                the same tween, so the wordmark sits on a line that is visibly
-                completing. */}
-            <div className="pl-fade bg-petal/25 mx-auto mt-6 h-px w-[min(240px,45vw)] overflow-hidden">
-              {/* The start state is an inline `transform`, NOT Tailwind's
-                  `scale-x-0`. Tailwind v4 compiles that class to the standalone
-                  `scale` property, and GSAP animates `transform: scaleX()` —
-                  two different properties that both apply, so `scale: 0 1`
-                  would have pinned the bar at zero however far GSAP scaled the
-                  transform, and the fill would never have appeared at all. */}
-              <div
-                className="pl-progress bg-petal/80 h-px w-full origin-left"
-                style={{ transform: "scaleX(0)" }}
-              />
-            </div>
-            {/* Set as its own line under the rule rather than as a second
-                wordmark. It used to run at the same size as "Trunk" with
-                0.45em of tracking at half opacity, which spread it nearly
-                three times the wordmark's width and still read as faint —
-                big, but not legible, which is the opposite of the point.
-                This mirrors the hero's order: status, then date. */}
-            <p className="pl-fade text-petal/90 mt-6 text-[clamp(1.05rem,3.4vw,2rem)] leading-none tracking-[0.3em] uppercase">
-              {site.eyebrow}
-            </p>
-            <p className="pl-fade text-sage/70 mt-3 text-[clamp(0.78rem,1.5vw,0.95rem)] tracking-[0.34em] uppercase">
-              {launchLabel}
-            </p>
-          </div>
-        </div>
-        <p className="pl-fade font-display text-petal/70 absolute right-6 bottom-6 text-sm tracking-[0.3em] tabular-nums">
-          {String(pct).padStart(3, "0")}
+    <div ref={root} className="fixed inset-0 z-[900]" aria-hidden="true">
+      <div
+        className="pl-ground absolute inset-0"
+        style={{ background: GROUND }}
+      />
+      {/* Sized by CSS to exactly the hero's mark, and hidden and centred from the
+          very first paint. It used to be sized by script, so for a frame it had
+          no size at all and filled the screen. */}
+      <Monogram
+        className={`pl-mark text-marigold absolute top-0 left-0 block origin-top-left ${HERO_MARK_SIZE}`}
+        style={{
+          clipPath: "inset(0 0 100% 0)",
+          transform: "translate(calc(50vw - 50%), calc(50svh - 50% - 18px))",
+        }}
+      />
+      <div className="absolute inset-x-0 bottom-[14svh] flex flex-col items-center gap-5 px-6 text-center">
+        <div
+          className="pl-line bg-marigold/70 h-px w-[min(180px,42vw)] origin-left"
+          style={{ transform: "scaleX(0)" }}
+        />
+        <p className="pl-label label text-cream/80" style={{ opacity: 0 }}>
+          {site.eyebrow} · {launchLabel}
         </p>
       </div>
     </div>
