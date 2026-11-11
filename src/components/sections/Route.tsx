@@ -240,7 +240,7 @@ export default function Route() {
             <p className="text-maroon/60 mt-[var(--space-2)] hidden max-w-[40ch] text-sm leading-relaxed md:block">
               {CONTENTS.join(" · ")}
             </p>
-            <div className="absolute bottom-0 left-1/2 aspect-[1968/1378] w-[min(70vw,24rem)] -translate-x-1/2 md:right-auto md:left-[var(--gutter)] md:w-[min(34vw,540px)] md:translate-x-0">
+            <div className="absolute bottom-0 left-1/2 aspect-[1968/1378] h-[19svh] -translate-x-1/2 md:right-auto md:left-[var(--gutter)] md:h-auto md:w-[min(34vw,540px)] md:translate-x-0">
               <HawaMahal className="h-full w-full" />
             </div>
             <div className="mx-auto mt-[var(--space-3)] hidden w-[min(80vw,28rem)] motion-reduce:block">
@@ -267,7 +267,7 @@ export default function Route() {
               </span>
               {launchLabel}
             </p>
-            <div className="absolute bottom-0 left-1/2 aspect-[1124/1287] h-[24svh] -translate-x-1/2 md:right-auto md:left-[var(--gutter)] md:h-[44svh] md:translate-x-0">
+            <div className="absolute bottom-0 left-1/2 aspect-[1124/1287] h-[21svh] -translate-x-1/2 md:right-auto md:left-[var(--gutter)] md:h-[44svh] md:translate-x-0">
               <Charminar className="h-full w-full" />
             </div>
           </div>
@@ -295,7 +295,7 @@ export default function Route() {
             pointer events, so the page and the cursor underneath keep working. */}
         <div
           ref={host}
-          className="r-host pointer-events-none absolute inset-x-[-6%] top-[36%] bottom-[16%] md:inset-x-auto md:top-[20%] md:-right-[6%] md:-bottom-[2%] md:left-[36%] motion-reduce:hidden"
+          className="r-host pointer-events-none absolute inset-x-[-6%] top-[max(31svh,19rem)] h-[calc(100svh_-_max(31svh,19rem)_-_19svh)] md:inset-x-auto md:top-[20%] md:-right-[6%] md:-bottom-[2%] md:left-[36%] md:h-auto motion-reduce:hidden"
         >
           {noGL ? (
             <div className="grid h-full place-items-center">{drawing}</div>
