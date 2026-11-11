@@ -1259,6 +1259,11 @@ export default function TrunkScene({
 
   return (
     <Canvas
+      /* Events come from the page, not the canvas, so the canvas can sit over the
+         page with pointer-events off (links and the cursor underneath keep working)
+         and the camera still leans toward the pointer. */
+      eventSource={document.body}
+      eventPrefix="client"
       /* "percentage" is PCFShadowMap. R3F's default for `shadows` is
          PCFSoftShadowMap, which three removed in 0.186 — it silently falls
          back to PCFShadowMap and warns on every renderer it builds. Asking

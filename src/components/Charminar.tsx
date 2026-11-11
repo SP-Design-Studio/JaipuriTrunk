@@ -31,7 +31,7 @@ export default function Charminar({ className = "" }: { className?: string }) {
         width={NATURAL.w}
         height={NATURAL.h}
         loading="eager"
-        sizes="(max-width: 768px) 34vw, 420px"
+        sizes="(max-width: 768px) 60vw, 640px"
         className="h-full w-full object-contain object-bottom select-none"
         onError={() => setFailed(true)}
         style={{

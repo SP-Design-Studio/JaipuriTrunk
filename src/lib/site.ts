@@ -9,6 +9,8 @@ export const site = {
   /** ISO 8601. Drives every date on the page and the countdown. The second trunk opens on Sunday 6 December. */
   launchISO: "2026-12-06T10:00:00+05:30",
   city: { from: "Jaipur", to: "Hyderabad" },
+  /** Where the two cities are, shown on the route. */
+  coords: { from: "26.91° N · 75.79° E", to: "17.39° N · 78.49° E" },
   social: {
     instagram: "https://instagram.com/jaipuri_trunk",
     email: "store@jaipuritrunk.com",

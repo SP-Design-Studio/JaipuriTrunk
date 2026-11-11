@@ -6,7 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import Countdown from "@/components/Countdown";
 import { HERO_MARK_SIZE, Monogram, Wordmark } from "@/components/Logo";
-import { scrollToId } from "@/lib/scroll";
+import ScrollLink from "@/components/ScrollLink";
 import { features, launch, site } from "@/lib/site";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -92,7 +92,7 @@ export default function Hero({
   return (
     <section
       ref={root}
-      id="top"
+      data-hero
       data-cursor-invert
       className="u-grain u-grain-dark bg-maroon text-cream relative isolate flex min-h-[100svh] flex-col overflow-hidden"
     >
@@ -106,16 +106,15 @@ export default function Hero({
       />
 
       <header className="h-fade relative z-20 flex items-center justify-between gap-6 px-[var(--gutter)] pt-[max(var(--gutter),env(safe-area-inset-top))]">
-        <a href="#top" aria-label={`${site.name}, back to the top`}>
+        <ScrollLink href="/" aria-label={`${site.name}, back to the top`}>
           <Wordmark className="text-marigold h-[1.05rem] w-auto sm:h-[1.2rem]" />
-        </a>
-        <button
-          type="button"
-          onClick={() => scrollToId("notify")}
-          className="label hover:text-marigold min-h-11 border-b border-current/40 pb-0.5 transition-colors"
+        </ScrollLink>
+        <ScrollLink
+          href="/#notify"
+          className="label hover:text-marigold inline-flex min-h-11 items-center border-b border-current/40 pb-0.5 transition-colors"
         >
           Notify me
-        </button>
+        </ScrollLink>
       </header>
 
       <div className="h-stage relative z-10 flex flex-1 flex-col items-center justify-center px-[var(--gutter)] py-[var(--space-2)] text-center">

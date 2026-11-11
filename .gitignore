@@ -46,9 +46,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Scratch dist dir for builds run alongside a live dev server
-.next-verify
+# Scratch dist dirs for builds run alongside a live dev server
+.next-*
 
 # Local waitlist captured by the dev fallback in /api/notify
 .notify-signups.json
-.next-dev-scratch

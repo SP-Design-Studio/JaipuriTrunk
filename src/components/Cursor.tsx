@@ -4,198 +4,116 @@ import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 
 /**
- * The pointer draws a running stitch — the hand stitch that closes a jutti's
- * upper and quilts a Jaipur bag. The page is about things made by hand; this
- * makes the visitor's own hand sew a seam across it as it goes.
+ * The pointer is one small circle that changes shape. It follows the mouse with a
+ * slight, soft lag and has four states, set as attributes on the layer and drawn by
+ * CSS (see `.cur` in globals.css):
  *
- * How it is built: the last few pointer positions are kept in a ring buffer,
- * and only ALTERNATE pairs are drawn. The gaps are not decoration — skipping
- * every other pair is what a running stitch is, thread over the cloth then
- * under it. It also means the seam draws itself out of the pointer's own
- * movement rather than being an animation played at it: move slowly and the
- * stitches shorten, stop and the thread runs out and disappears.
+ *  - rest:   a small solid circle, maroon on the cream pages, cream on the maroon ones;
+ *  - hit:    over anything clickable it opens into a larger ring with a faint orange wash;
+ *  - press:  it tightens while the button is down;
+ *  - text:   over a text field it becomes a thin vertical bar, like a caret.
+ *
+ * It replaces the system cursor everywhere (the `cursor-none` class on <html>), so the
+ * site never shows two pointers.
+ *
+ * Only fine pointers get it (a phone or tablet never sees it), and with reduced
+ * motion it stops lagging.
  */
 
-/** Pointer positions kept. At 60fps this is a little under half a second. */
-const SAMPLES = 26;
-/** Every other pair is a stitch; the rest are the gaps between them. */
-const STITCHES = SAMPLES / 2;
+/** Things you can click. */
+const HIT = "a, button, summary, [role='button'], [data-cursor-hit]";
+/** Things you can type into. */
+const TEXT = "input, textarea, select, [contenteditable='true']";
 
 export default function Cursor() {
-  const needle = useRef<HTMLDivElement>(null);
-  const seam = useRef<SVGGElement>(null);
   const layer = useRef<HTMLDivElement>(null);
+  const mark = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const L = layer.current;
+    const M = mark.current;
+    if (!L || !M) return;
+
     // The layer lives in the browser's top layer, so it can be raised above a modal
-    // dialog (such as the gallery), which z-index alone cannot do.
+    // dialog (the gallery), which z-index alone cannot do.
     try {
-      layer.current?.showPopover?.();
+      L.showPopover?.();
     } catch {
       /* already open, or no popover support: the fixed layer still works */
     }
-    // Touch devices never see this — there is no pointer to trail, and the
-    // seam would be drawn under the hand anyway.
+
+    // Touch devices never see this: there is no pointer to follow.
     if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches)
       return;
-    const n = needle.current;
-    const g = seam.current;
-    if (!n || !g) return;
 
-    const stitches = Array.from(g.children) as SVGLineElement[];
     const reduce = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
+    const wide = window.matchMedia("(min-width: 768px)");
 
-    // Thread thins and fades along its length, so the seam reads as trailing
-    // off rather than being cut. Both are fixed per stitch, so they are set
-    // once here and never touched in the frame loop.
-    stitches.forEach((s, i) => {
-      const t = i / STITCHES;
-      s.setAttribute("opacity", String(Math.max(0.05, 1 - t * 1.15)));
-      s.setAttribute("stroke-width", String(1.6 - t * 0.7));
+    const markX = gsap.quickTo(M, "x", {
+      duration: reduce ? 0 : 0.18,
+      ease: "power3.out",
+    });
+    const markY = gsap.quickTo(M, "y", {
+      duration: reduce ? 0 : 0.18,
+      ease: "power3.out",
     });
 
-    gsap.set(n, { xPercent: -50, yPercent: -50, opacity: 0 });
-    const nx = gsap.quickTo(n, "x", { duration: 0.07, ease: "power3" });
-    const ny = gsap.quickTo(n, "y", { duration: 0.07, ease: "power3" });
-
-    const xs = new Float32Array(SAMPLES);
-    const ys = new Float32Array(SAMPLES);
-    let head = 0;
-    let primed = false;
     let shown = false;
-    let px = 0;
-    let py = 0;
-
-    const move = (e: PointerEvent) => {
-      px = e.clientX;
-      py = e.clientY;
-      if (!primed) {
-        // Seed the whole buffer, or the first frame whips a seam across the
-        // page from 0,0 to wherever the pointer entered.
-        xs.fill(px);
-        ys.fill(py);
-        primed = true;
-      }
-      if (!shown) {
-        shown = true;
-        syncNativeCursor();
-        gsap.to(reduce ? [n] : [n, g], { opacity: 1, duration: 0.25 });
-      }
-      nx(px);
-      ny(py);
-    };
-
-    /**
-     * Longest a single stitch may be before the thread is treated as having
-     * been lifted rather than drawn.
-     *
-     * A hand moving a mouse covers maybe 15px between frames. A flick across
-     * a wide screen, a pointer re-entering the window, or a tab regaining
-     * focus can jump hundreds — and one sample like that stretches a single
-     * stitch right across the page, which looks like a glitch rather than a
-     * seam. Past this the buffer is re-seeded, so the thread simply picks up
-     * again where the pointer landed.
-     */
-    const MAX_STITCH = 140;
-
-    // Sampled per frame rather than per pointermove: mice fire at wildly
-    // different rates, and a buffer fed by events would make the stitch
-    // length depend on the hardware rather than on how fast you moved.
-    // Once the pointer has been still for longer than the thread is long, every
-    // stitch has collapsed to a point: there is nothing left to draw, so stop
-    // writing to the DOM until it moves again.
-    let lastX = px;
-    let lastY = py;
-    let still = 0;
-    const sew = () => {
-      if (px === lastX && py === lastY) {
-        if (++still > SAMPLES + 2) return;
-      } else {
-        still = 0;
-        lastX = px;
-        lastY = py;
-      }
-      if (Math.hypot(px - xs[head], py - ys[head]) > MAX_STITCH) {
-        xs.fill(px);
-        ys.fill(py);
-      }
-      head = (head + 1) % SAMPLES;
-      xs[head] = px;
-      ys[head] = py;
-      for (let s = 0; s < stitches.length; s++) {
-        const a = (head - s * 2 + SAMPLES) % SAMPLES;
-        const b = (head - s * 2 - 1 + SAMPLES) % SAMPLES;
-        const line = stitches[s];
-        line.setAttribute("x1", String(xs[a]));
-        line.setAttribute("y1", String(ys[a]));
-        line.setAttribute("x2", String(xs[b]));
-        line.setAttribute("y2", String(ys[b]));
-      }
-    };
-    if (!reduce) gsap.ticker.add(sew);
-
-    /**
-     * The native pointer is only hidden while ours is genuinely visible.
-     *
-     * The wrapper is `hidden md:block`, so below the md breakpoint there is no
-     * custom cursor to see — and a CSS rule hiding the native one there left
-     * the window with no pointer at all. Tracked live rather than read once,
-     * because a window can be dragged across that breakpoint.
-     */
-    const wide = window.matchMedia("(min-width: 768px)");
-    const syncNativeCursor = () =>
+    // The native pointer is hidden only while ours is genuinely on screen. Tracked
+    // live, because a window can be dragged across the breakpoint.
+    const sync = () =>
       document.documentElement.classList.toggle(
         "cursor-none",
         shown && wide.matches,
       );
-    wide.addEventListener("change", syncNativeCursor);
+    wide.addEventListener("change", sync);
 
-    let overDark = false;
-
-    /** Maroon thread on the cream pages, cream on the maroon ones; orange over a target. */
-    const thread = (hit: boolean) =>
-      hit
-        ? "var(--color-marigold)"
-        : overDark
-          ? "var(--color-cream)"
-          : "var(--color-maroon)";
-
-    const over = (e: PointerEvent) => {
-      const el = e.target as HTMLElement;
-      // Only genuinely interactive elements. The needle knotting over
-      // something that cannot be clicked reads as a promise the page does not
-      // keep.
-      const hit = Boolean(el.closest("a, button, input"));
-      // Sections opt in by attribute (the maroon ones carry it).
-      overDark = Boolean(el.closest("[data-cursor-invert]"));
-
-      const colour = thread(hit);
-      gsap.to(g, { stroke: colour, duration: 0.3 });
-      // Over a target the needle ties off: it swells into a knot and the
-      // thread behind it tightens.
-      gsap.to(n, {
-        backgroundColor: colour,
-        scale: hit ? 2.6 : 1,
-        duration: 0.3,
-        ease: "power3.out",
-      });
-      if (!reduce) gsap.to(g, { opacity: hit ? 0.55 : 1, duration: 0.3 });
+    const move = (e: PointerEvent) => {
+      if (!shown) {
+        // Start where the pointer is, or it flies in from the corner.
+        gsap.set(M, { x: e.clientX, y: e.clientY });
+        shown = true;
+        L.setAttribute("data-on", "");
+        sync();
+      }
+      markX(e.clientX);
+      markY(e.clientY);
     };
 
-    const leave = () => gsap.to([n, g], { opacity: 0, duration: 0.25 });
+    const over = (e: PointerEvent) => {
+      const el = e.target as Element | null;
+      if (!el) return;
+      const text = Boolean(el.closest(TEXT));
+      L.toggleAttribute("data-text", text);
+      L.toggleAttribute("data-hit", !text && Boolean(el.closest(HIT)));
+      // Sections opt in by attribute: the maroon ones carry data-cursor-invert.
+      L.dataset.tone = el.closest("[data-cursor-invert]") ? "dark" : "light";
+    };
+
+    const down = () => L.setAttribute("data-press", "");
+    const up = () => L.removeAttribute("data-press");
+    const leave = () => {
+      shown = false;
+      L.removeAttribute("data-on");
+      L.removeAttribute("data-press");
+      sync();
+    };
 
     window.addEventListener("pointermove", move, { passive: true });
     window.addEventListener("pointerover", over, { passive: true });
-    document.addEventListener("pointerleave", leave);
+    window.addEventListener("pointerdown", down, { passive: true });
+    window.addEventListener("pointerup", up, { passive: true });
+    document.addEventListener("mouseleave", leave);
     return () => {
       document.documentElement.classList.remove("cursor-none");
-      wide.removeEventListener("change", syncNativeCursor);
-      gsap.ticker.remove(sew);
+      wide.removeEventListener("change", sync);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerover", over);
-      document.removeEventListener("pointerleave", leave);
+      window.removeEventListener("pointerdown", down);
+      window.removeEventListener("pointerup", up);
+      document.removeEventListener("mouseleave", leave);
     };
   }, []);
 
@@ -204,28 +122,12 @@ export default function Cursor() {
       ref={layer}
       id="cursor-layer"
       popover="manual"
-      className="pointer-events-none fixed inset-0 z-[999] m-0 hidden h-screen w-screen overflow-visible border-0 bg-transparent p-0 md:block"
+      aria-hidden="true"
+      className="cur pointer-events-none fixed inset-0 z-[999] m-0 hidden h-screen w-screen overflow-visible border-0 bg-transparent p-0 md:block"
     >
-      <svg className="absolute inset-0 h-full w-full">
-        {/* Hidden until the first pointermove seeds the buffer. Zero-length
-            lines with a round cap still paint as dots, so an unhidden seam
-            would show as a knot of dots at the top-left corner on load. */}
-        <g
-          ref={seam}
-          stroke="var(--color-maroon)"
-          strokeLinecap="round"
-          fill="none"
-          opacity={0}
-        >
-          {Array.from({ length: STITCHES }, (_, i) => (
-            <line key={i} x1={0} y1={0} x2={0} y2={0} />
-          ))}
-        </g>
-      </svg>
-      <div
-        ref={needle}
-        className="bg-maroon absolute top-0 left-0 h-2 w-2 rounded-full"
-      />
+      <div ref={mark} className="absolute top-0 left-0">
+        <div className="cur-mark" />
+      </div>
     </div>
   );
 }

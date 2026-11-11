@@ -13,7 +13,6 @@
 export const HERO_MARK_SIZE =
   "h-[clamp(5.5rem,20svh,8.5rem)] w-auto md:h-[clamp(8rem,30svh,19rem)]";
 
-export const WORDMARK_RATIO = 11.0466;
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
     <svg
@@ -41,7 +40,6 @@ export function Wordmark({ className = "" }: { className?: string }) {
   );
 }
 
-export const MONOGRAM_RATIO = 0.7329;
 /** The monogram's drawing, shared with the 3D trunk so its inlay is the same artwork. */
 export const MONOGRAM_VIEWBOX = "212.5 -1 222.25 303.25";
 export const MONOGRAM_PATHS = [

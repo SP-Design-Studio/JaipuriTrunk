@@ -39,6 +39,18 @@ export default function Finale() {
             scrub: 0.6,
           },
         });
+        // The ask gives way as the footer rises to meet it.
+        gsap.to(".f-ask", {
+          opacity: 0.12,
+          y: -50,
+          ease: "none",
+          scrollTrigger: {
+            trigger: ".f-foot",
+            start: "top 88%",
+            end: "top 12%",
+            scrub: true,
+          },
+        });
         gsap.from(".f-mark", {
           y: 90,
           opacity: 0,

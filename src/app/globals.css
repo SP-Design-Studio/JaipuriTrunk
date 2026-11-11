@@ -13,11 +13,6 @@
   --color-cream: #f4e8d3;
   --color-paper: #ebdcc5;
   --color-ink: #241a1d;
-  /* Still read by the 404, the cursor and the waitlist confirmation. */
-  --color-sage: #a8b48a;
-  --color-sage-soft: #a0ab89;
-  --color-olive: #5e6841;
-  --color-olive-deep: #3d4429;
   --color-sand: #cbb8a4;
 
   --font-display: var(--font-seasons), "The Seasons", Georgia, serif;
@@ -104,69 +99,6 @@ html.lenis body {
 }
 .tnum {
   font-variant-numeric: tabular-nums;
-}
-
-/* The craft scene: three photographs laid over the sentence, placed in viewport
-   units so the composition holds at any size. */
-.c-fig {
-  position: absolute;
-  left: var(--x);
-  top: var(--y);
-  height: var(--h);
-}
-.c-fig-1 {
-  --x: 6vw;
-  --y: 22svh;
-  --h: 62svh;
-}
-.c-fig-2 {
-  --x: 38vw;
-  --y: 30svh;
-  --h: 54svh;
-}
-.c-fig-3 {
-  left: auto;
-  right: 6vw;
-  --y: 10svh;
-  --h: 46svh;
-}
-@media (max-width: 767px) {
-  /* A staggered column, each photograph clear of the one above and of its caption. */
-  .c-fig-1 {
-    --x: 5vw;
-    --y: 9svh;
-    --h: 29svh;
-  }
-  .c-fig-2 {
-    left: auto;
-    right: 5vw;
-    --y: 42svh;
-    --h: 24svh;
-  }
-  /* Its photograph hugs the right edge, so its caption does too. */
-  .c-fig-2 figcaption {
-    left: auto;
-    right: 0;
-    text-align: right;
-  }
-  .c-fig-3 {
-    left: 9vw;
-    right: auto;
-    --y: 74svh;
-    --h: 18svh;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .c-fig,
-  .c-fig-3 {
-    position: relative;
-    left: auto;
-    top: auto;
-    right: auto;
-    height: auto;
-    width: min(72vw, 420px);
-    margin: var(--space-3) auto;
-  }
 }
 
 /* Handmade card stock, matte: a flat warm paper colour with a barely-there tooth
@@ -314,4 +246,114 @@ body {
 /* In the phone pile only the top photograph shows its pin. */
 .pin-rest .pin-head {
   display: none;
+}
+
+/* The custom cursor: one small circle that changes shape. States are attributes on .cur. */
+.cur {
+  --cur: var(--color-maroon);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.cur[data-tone="dark"] {
+  --cur: var(--color-cream);
+}
+.cur[data-on] {
+  opacity: 1;
+}
+/* At rest a small solid circle; over a target it opens into a larger ring with a faint
+   orange wash, so the label beneath stays readable. */
+.cur-mark {
+  position: absolute;
+  width: 0.65rem;
+  height: 0.65rem;
+  margin: -0.325rem 0 0 -0.325rem;
+  border: 1px solid var(--cur);
+  border-radius: 9999px;
+  background: var(--cur);
+  transition:
+    width 0.45s var(--ease-expo),
+    height 0.45s var(--ease-expo),
+    margin 0.45s var(--ease-expo),
+    border-radius 0.3s ease,
+    background-color 0.3s ease,
+    transform 0.45s var(--ease-expo);
+}
+.cur[data-hit] .cur-mark {
+  width: 2.6rem;
+  height: 2.6rem;
+  margin: -1.3rem 0 0 -1.3rem;
+  background: color-mix(in srgb, var(--color-marigold) 16%, transparent);
+}
+/* Over a text field it becomes a thin vertical bar, like a caret. */
+.cur[data-text] .cur-mark {
+  width: 1px;
+  height: 1.6rem;
+  margin: -0.8rem 0 0 -0.5px;
+  border-width: 0;
+  border-radius: 0;
+  background: var(--cur);
+}
+/* While pressed it tightens. */
+.cur[data-press] .cur-mark {
+  transform: scale(0.8);
+}
+.cur[data-hit][data-press] .cur-mark {
+  transform: scale(0.88);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cur-mark {
+    transition: none;
+  }
+}
+
+/* The gallery sheet rises in when it opens and settles away when it closes. */
+dialog[open] {
+  animation: sheet-in 0.6s var(--ease-expo) both;
+}
+dialog[open][data-closing] {
+  animation: sheet-out 0.38s ease-in both;
+}
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(32px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sheet-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(24px) scale(0.99);
+  }
+}
+
+/* Things that arrive on a page that has no scroll scenes (the 404): they rise in one
+   after another. Set a delay with --d. */
+.page-rise {
+  animation: page-rise 1.1s var(--ease-expo) both;
+  animation-delay: var(--d, 0s);
+}
+@keyframes page-rise {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog[open],
+  dialog[open][data-closing],
+  .page-rise {
+    animation: none;
+  }
 }

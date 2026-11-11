@@ -254,6 +254,21 @@ export default function StallGallery({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const cols = useSyncExternalStore(subscribe, columnCount, () => 3);
+  const [closing, setClosing] = useState(false);
+
+  /** Closing plays its exit first; the dialog is only closed once it has finished. */
+  const requestClose = () => {
+    if (closing) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      onClose();
+      return;
+    }
+    setClosing(true);
+    window.setTimeout(() => {
+      setClosing(false);
+      onClose();
+    }, 380);
+  };
 
   useEffect(() => {
     const d = ref.current;
@@ -282,6 +297,12 @@ export default function StallGallery({
     <dialog
       ref={ref}
       onClose={onClose}
+      /* Escape plays the same exit as the Close button. */
+      onCancel={(e) => {
+        e.preventDefault();
+        requestClose();
+      }}
+      data-closing={closing || undefined}
       aria-label={title}
       className="bg-paper text-maroon fixed inset-0 m-0 h-[100dvh] max-h-none w-screen max-w-none overflow-y-auto overscroll-contain p-0 backdrop:bg-transparent"
       style={{
@@ -298,7 +319,7 @@ export default function StallGallery({
             </h2>
             <button
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               className="label border-maroon/40 hover:bg-maroon hover:text-cream min-h-11 shrink-0 border px-5 transition-colors"
             >
               {trunksSection.closeButton}

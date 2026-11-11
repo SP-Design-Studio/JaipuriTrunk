@@ -9,7 +9,6 @@ import { AssetProvider } from "@/components/AssetProvider";
 import Hero from "@/components/sections/Hero";
 import Collection from "@/components/sections/Collection";
 import Craft from "@/components/sections/Craft";
-import Trunk from "@/components/sections/Trunk";
 import Route from "@/components/sections/Route";
 import Finale from "@/components/sections/Finale";
 
@@ -34,7 +33,6 @@ export default function Experience({ assets }: { assets: string[] }) {
         <Hero ready={ready} markOn={!showPreloader} />
         <Collection />
         <Craft />
-        <Trunk />
         <Route />
         <Finale />
       </main>

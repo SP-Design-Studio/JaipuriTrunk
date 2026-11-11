@@ -51,7 +51,7 @@ export default function HawaMahal({ className = "" }: { className?: string }) {
            a vw hint the browser asked for the 3840 variant and then stalled on
            it, while the Charminar next to it — which has always ended in a
            fixed px — loaded immediately. */
-        sizes="(max-width: 768px) 46vw, 600px"
+        sizes="(max-width: 768px) 90vw, 800px"
         className="h-full w-full object-contain object-bottom select-none"
         onError={() => setFailed(true)}
         style={{

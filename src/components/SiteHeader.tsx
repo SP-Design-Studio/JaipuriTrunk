@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { scrollToId } from "@/lib/scroll";
+import ScrollLink from "@/components/ScrollLink";
 import { Wordmark } from "@/components/Logo";
 import { launch, site } from "@/lib/site";
 
@@ -15,7 +15,7 @@ export default function SiteHeader() {
   const [atAsk, setAtAsk] = useState(false);
 
   useEffect(() => {
-    const hero = document.getElementById("top");
+    const hero = document.querySelector<HTMLElement>("[data-hero]");
     const ask = document.querySelector<HTMLElement>(".f-ask");
     const foot = document.querySelector<HTMLElement>(".f-foot");
     if (!hero || !ask || !foot) return;
@@ -51,27 +51,25 @@ export default function SiteHeader() {
       aria-hidden={!shown}
       className={`bg-cream/95 text-maroon fixed inset-x-0 top-0 z-40 flex items-center justify-between gap-4 px-[var(--gutter)] pt-[env(safe-area-inset-top)] transition-transform duration-500 ease-[var(--ease-expo)] ${shown ? "translate-y-0" : "-translate-y-full"}`}
     >
-      <button
-        type="button"
+      <ScrollLink
+        href="/"
         tabIndex={shown ? 0 : -1}
-        onClick={() => scrollToId("top")}
         aria-label={`${site.name}, back to the top`}
         className="flex min-h-12 items-center"
       >
         <Wordmark className="h-[0.95rem] w-auto" />
-      </button>
+      </ScrollLink>
       <div className="flex items-center gap-5">
         <p className="label text-maroon/60 hidden sm:block">
           {site.eyebrow} · {launch.day} {launch.month}
         </p>
-        <button
-          type="button"
+        <ScrollLink
+          href="/#notify"
           tabIndex={shown ? 0 : -1}
-          onClick={() => scrollToId("notify")}
-          className="label bg-maroon text-cream hover:bg-maroon-deep min-h-10 px-4 transition-colors"
+          className="label bg-maroon text-cream hover:bg-maroon-deep inline-flex min-h-10 items-center px-4 transition-colors"
         >
           Notify me
-        </button>
+        </ScrollLink>
       </div>
     </header>
   );

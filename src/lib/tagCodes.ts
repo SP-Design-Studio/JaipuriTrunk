@@ -80,7 +80,7 @@ export type Element = { bar: boolean; units: number };
  * Callers lay these out in an SVG viewBox whose width is the unit total, so the
  * ratios survive at any rendered size.
  */
-export function encode39(text: string): Element[] {
+function encode39(text: string): Element[] {
   const chars = ["*", ...text.toUpperCase().split(""), "*"];
   const out: Element[] = [];
   chars.forEach((ch, i) => {
@@ -95,9 +95,6 @@ export function encode39(text: string): Element[] {
   });
   return out;
 }
-
-/** Total width of a symbol, in narrow units. */
-export const widthOf = (els: Element[]) => els.reduce((n, e) => n + e.units, 0);
 
 /**
  * The drawable form: bar rectangles with their offsets, and the total width.

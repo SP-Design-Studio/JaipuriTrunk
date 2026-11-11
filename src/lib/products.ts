@@ -7,11 +7,9 @@ export type Item = {
    * don't get a card in the rail.
    */
   src?: string;
-  /** Card shape in the Act 2 rail. */
-  shape?: "tall" | "square" | "portrait";
 };
 
-export type Category = {
+type Category = {
   id: string;
   title: string;
   /** One line of context. Keep it factual — no invented provenance. */
@@ -29,13 +27,11 @@ export const categories: Category[] = [
         id: "leather-juttis",
         name: "Leather juttis",
         src: "/images/products/leather-juttis.webp",
-        shape: "square",
       },
       {
         id: "embroidered-juttis",
         name: "Embroidered juttis",
         src: "/images/products/embroidered-juttis.webp",
-        shape: "portrait",
       },
       { id: "khussa-shoes", name: "Khussa shoes" },
     ],
@@ -49,31 +45,26 @@ export const categories: Category[] = [
         id: "jhumkas",
         name: "Jhumkas",
         src: "/images/products/jhumkas.webp",
-        shape: "tall",
       },
       {
         id: "enamel-oxidised-earrings",
         name: "Enamel oxidised earrings",
         src: "/images/products/enamel-oxidised-earrings.webp",
-        shape: "square",
       },
       {
         id: "khadas",
         name: "Khadas",
         src: "/images/products/khadas.webp",
-        shape: "square",
       },
       {
         id: "kundan-chandbalis",
         name: "Oxidised Kundan chandbalis",
         src: "/images/products/chandbalis.webp",
-        shape: "square",
       },
       {
         id: "drop-motif-earrings",
         name: "Drop motif earrings",
         src: "/images/products/drop-motif-earrings.webp",
-        shape: "square",
       },
     ],
   },
@@ -86,13 +77,11 @@ export const categories: Category[] = [
         id: "quilted-handbags",
         name: "Quilted handbags",
         src: "/images/products/quilted-handbags.webp",
-        shape: "portrait",
       },
       {
         id: "quilted-pouches",
         name: "Quilted pouches",
         src: "/images/products/quilted-pouches.webp",
-        shape: "tall",
       },
       { id: "sling-bags", name: "Sling bags" },
     ],
@@ -100,7 +89,7 @@ export const categories: Category[] = [
 ];
 
 /** An item we actually have a photograph of, so `src` is guaranteed. */
-export type PhotographedItem = Item & { src: string };
+type PhotographedItem = Item & { src: string };
 
 const hasPhoto = (item: Item): item is PhotographedItem => Boolean(item.src);
 

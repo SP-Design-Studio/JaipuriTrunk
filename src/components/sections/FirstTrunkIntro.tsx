@@ -203,6 +203,19 @@ export default function FirstTrunkIntro() {
           .to(".d-node-2", { scale: 1, duration: 0.4 }, 4.0)
           .to(".d-item-last", { opacity: 1, y: 0, duration: 1 }, 4.1)
           .to({}, { duration: 1.4 });
+
+        // Leaving: once the scene unpins, it lifts and fades as it scrolls away.
+        gsap.to(".d-wrap", {
+          opacity: 0,
+          y: -70,
+          ease: "none",
+          scrollTrigger: {
+            trigger: root.current,
+            start: "bottom bottom",
+            end: "bottom 38%",
+            scrub: true,
+          },
+        });
       });
       return () => mm.revert();
     },
@@ -212,7 +225,7 @@ export default function FirstTrunkIntro() {
   return (
     <div ref={root} className="relative h-[260svh] motion-reduce:h-auto">
       <div className="sticky top-0 flex h-[100svh] items-center motion-reduce:static motion-reduce:min-h-[100svh] motion-reduce:py-[var(--space-section)]">
-        <div className="mx-auto w-full max-w-[1600px] px-[var(--gutter)]">
+        <div className="d-wrap mx-auto w-full max-w-[1600px] px-[var(--gutter)]">
           <h2 className="d-title display text-[clamp(3rem,9vw,8rem)] leading-[0.95]">
             {trunksSection.title}
           </h2>

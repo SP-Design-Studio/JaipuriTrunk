@@ -1,11 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
 import Image from "next/image";
 import { useHasAsset } from "@/components/AssetProvider";
 import { Monogram } from "@/components/Logo";
 import { categories } from "@/lib/products";
+import { leave, reveal } from "@/lib/motion";
 import FirstTrunkIntro from "./FirstTrunkIntro";
+
+gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 type Row = {
   id: string;
@@ -75,6 +81,7 @@ export default function Collection() {
 
   const [active, setActive] = useState(rows[0].id);
   const list = useRef<HTMLOListElement>(null);
+  const root = useRef<HTMLElement>(null);
 
   // The row crossing a line near the middle of the viewport is the active one.
   // Higher up on a phone, where the stage covers the top of the screen.
@@ -95,17 +102,53 @@ export default function Collection() {
     return () => io.disconnect();
   }, []);
 
+  // Each row rises in as it arrives and lifts away as it leaves.
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        gsap.utils
+          .toArray<HTMLElement>("[data-row]")
+          .forEach((row) => reveal(row, { from: { y: 36 }, start: "top 92%" }));
+
+        // The card arrives with the list and, at the end, gives way as it scrolls off.
+        const card = root.current?.querySelector<HTMLElement>(".l-card");
+        if (card && root.current) {
+          reveal(card, {
+            from: { y: 60, scale: 0.97 },
+            to: { y: 0, scale: 1 },
+            start: "top 88%",
+            exit: false,
+            duration: 1.5,
+          });
+          leave(card, root.current, {
+            start: "bottom bottom",
+            end: "bottom 40%",
+            to: 0.2,
+            lift: -5,
+          });
+        }
+      });
+      return () => mm.revert();
+    },
+    { scope: root },
+  );
+
   const current = rows.find((r) => r.id === active) ?? rows[0];
 
   return (
-    <section id="first-trunk" className="bg-cream text-maroon relative">
+    <section
+      ref={root}
+      id="first-trunk"
+      className="bg-cream text-maroon relative"
+    >
       <FirstTrunkIntro />
 
       <div className="mx-auto grid max-w-[1600px] px-[var(--gutter)] md:grid-cols-12 md:gap-x-[2vw]">
         {/* The stage. Sticky: from the top of a phone, centred on a desktop. */}
         <div className="bg-cream sticky top-[calc(3rem+env(safe-area-inset-top))] z-10 -mx-[var(--gutter)] px-[var(--gutter)] pt-2 pb-3 md:static md:col-span-6 md:col-start-7 md:row-start-1 md:mx-0 md:bg-transparent md:p-0">
           <div className="md:sticky md:top-[7svh]">
-            <div className="relative h-[40svh] md:h-[82svh]">
+            <div className="l-card relative h-[40svh] md:h-[82svh]">
               {/* Two sheets of handmade card, the lower one a little askew, so it
                   reads as stock with thickness. Matte, with a barely-there tooth.
                   The edge is a static clip-path and the shadow a plain box-shadow:
@@ -190,8 +233,8 @@ export default function Collection() {
               >
                 <span
                   aria-hidden="true"
-                  className={`bg-marigold size-1.5 shrink-0 rotate-45 transition-transform duration-700 ease-[var(--ease-expo)] ${
-                    r.id === active ? "scale-100" : "scale-0"
+                  className={`bg-marigold h-px w-6 shrink-0 origin-left transition-transform duration-700 ease-[var(--ease-expo)] ${
+                    r.id === active ? "scale-x-100" : "scale-x-0"
                   }`}
                 />
                 <span className="display text-[clamp(1.7rem,4vw,3.4rem)]">
